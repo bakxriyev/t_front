@@ -1,0 +1,269 @@
+"use client";
+import { useState, useEffect, useCallback } from "react";
+import { X, Scale, Send } from "lucide-react";
+import { C, COURSES } from "@/lib/constants";
+import { useLanguage } from "@/contexts/LanguageContext";
+
+interface EnrollModalProps {
+  course?: string;
+  onClose: () => void;
+}
+
+export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps) {
+  const { lang, t } = useLanguage();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [course, setCourse] = useState(initialCourse || "");
+
+  const handleEscape = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    },
+    [onClose]
+  );
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleEscape);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "";
+    };
+  }, [handleEscape]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const selectedCourse = COURSES.find((c) => String(c.id) === course);
+    const courseName = selectedCourse
+      ? lang === "UZ"
+        ? selectedCourse.title_uz
+        : lang === "RU"
+        ? selectedCourse.title_ru
+        : selectedCourse.title
+      : course;
+    const message = `New Course Application%0A%0AFirst Name: ${firstName}%0ALast Name: ${lastName}%0APhone: ${phone}%0AAddress: ${address}%0ACourse: ${courseName}`;
+    window.open(`https://t.me/tashkentlawschool?text=${message}`, "_blank");
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div
+        className="relative w-full max-w-lg rounded-3xl p-8 animate-fade-in-up"
+        style={{
+          background: C.card,
+          border: "1px solid rgba(236,198,103,0.3)",
+        }}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-5 right-5 p-2 rounded-full transition-colors duration-200 hover:opacity-70"
+          style={{ color: C.muted }}
+          aria-label="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="flex flex-col items-center text-center mb-8">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+            style={{ background: C.burGrad }}
+          >
+            <Scale className="w-7 h-7" style={{ color: C.gold }} />
+          </div>
+          <h2
+            className="text-2xl md:text-3xl font-bold mb-1"
+            style={{ fontFamily: "'Playfair Display', serif", color: C.white }}
+          >
+            {t.enroll_title || "Apply for Course"}
+          </h2>
+          <p style={{ color: C.muted, fontSize: "0.875rem" }}>
+            {t.enroll_subtitle || "Fill in the form below and we will contact you shortly"}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                className="block text-xs font-medium mb-1.5 font-sans"
+                style={{ color: C.secondary }}
+              >
+                {t.firstname || "First Name"}
+              </label>
+              <input
+                type="text"
+                required
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="John"
+                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300 font-sans"
+                style={{
+                  background: "#141414",
+                  border: `1px solid ${C.border}`,
+                  color: C.white,
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = C.gold;
+                  e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`;
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = C.border;
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              />
+            </div>
+            <div>
+              <label
+                className="block text-xs font-medium mb-1.5 font-sans"
+                style={{ color: C.secondary }}
+              >
+                {t.lastname || "Last Name"}
+              </label>
+              <input
+                type="text"
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Doe"
+                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300 font-sans"
+                style={{
+                  background: "#141414",
+                  border: `1px solid ${C.border}`,
+                  color: C.white,
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = C.gold;
+                  e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`;
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = C.border;
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              className="block text-xs font-medium mb-1.5 font-sans"
+              style={{ color: C.secondary }}
+            >
+              {t.phone || "Phone Number"}
+            </label>
+            <input
+              type="tel"
+              required
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+998 XX XXX XX XX"
+              className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300 font-sans"
+              style={{
+                background: "#141414",
+                border: `1px solid ${C.border}`,
+                color: C.white,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = C.gold;
+                e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = C.border;
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            />
+          </div>
+
+          <div>
+            <label
+              className="block text-xs font-medium mb-1.5 font-sans"
+              style={{ color: C.secondary }}
+            >
+              {t.address || "Address"}
+            </label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Tashkent, ..."
+              className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300 font-sans"
+              style={{
+                background: "#141414",
+                border: `1px solid ${C.border}`,
+                color: C.white,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = C.gold;
+                e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = C.border;
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            />
+          </div>
+
+          <div>
+            <label
+              className="block text-xs font-medium mb-1.5 font-sans"
+              style={{ color: C.secondary }}
+            >
+              {t.course_select || "Preferred Course"}
+            </label>
+            <select
+              required
+              value={course}
+              onChange={(e) => setCourse(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300 font-sans appearance-none cursor-pointer"
+              style={{
+                background: "#141414",
+                border: `1px solid ${C.border}`,
+                color: C.white,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = C.gold;
+                e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = C.border;
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              <option value="" disabled style={{ background: C.card, color: C.muted }}>
+                {t.course_select || "Select a course..."}
+              </option>
+              {COURSES.map((c) => {
+                const courseTitle =
+                  lang === "UZ" ? c.title_uz : lang === "RU" ? c.title_ru : c.title;
+                return (
+                  <option key={c.id} value={c.id} style={{ background: C.card, color: C.white }}>
+                    {courseTitle}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-3.5 rounded-xl flex items-center justify-center gap-2 font-semibold text-sm font-sans transition-all duration-300 hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-[0.98]"
+            style={{
+              background: C.btnGrad,
+              color: C.bg,
+              boxShadow: C.btnShadow,
+            }}
+          >
+            <Send className="w-4 h-4" />
+            {t.submit_enroll || "Submit Application"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model Course {
+  id          Int      @id @default(autoincrement())
+  title       String
+  titleUz     String?
+  titleRu    String?
+  titleEn    String?
+  description String
+  descriptionUz String?
+  descriptionRu String?
+  descriptionEn String?
+  price       Float    @default(0)
+  duration    String
+  level       String
+  image       String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Teacher {
+  id          Int      @id @default(autoincrement())
+  name        String
+  nameUz     String?
+  nameRu     String?
+  nameEn     String?
+  title       String
+  titleUz    String?
+  titleRu    String?
+  titleEn    String?
+  description String
+  descriptionUz String?
+  descriptionRu String?
+  descriptionEn String?
+  image       String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model News {
+  id        Int      @id @default(autoincrement())
+  title     String
+  titleUz  String?
+  titleRu  String?
+  titleEn  String?
+  slug      String   @unique
+  content   String
+  contentUz  String?
+  contentRu  String?
+  contentEn  String?
+  image     String?
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Vacancy {
+  id           Int      @id @default(autoincrement())
+  title        String
+  titleUz     String?
+  titleRu     String?
+  titleEn     String?
+  description  String
+  descriptionUz String?
+  descriptionRu String?
+  descriptionEn String?
+  requirements String?
+  salary       String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Hero {
+  id          Int      @id @default(autoincrement())
+  title       String
+  titleUz    String?
+  titleRu    String?
+  titleEn    String?
+  subtitle    String?
+  subtitleUz String?
+  subtitleRu String?
+  subtitleEn String?
+  description String?
+  descriptionUz String?
+  descriptionRu String?
+  descriptionEn String?
+  buttonText  String?
+  buttonLink  String?
+  image       String?
+  videoUrl    String?
+  active      Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Testimonial {
+  id          Int      @id @default(autoincrement())
+  name        String
+  nameUz     String?
+  nameRu     String?
+  nameEn     String?
+  title       String?
+  titleUz    String?
+  titleRu    String?
+  titleEn    String?
+  content     String?
+  contentUz  String?
+  contentRu  String?
+  contentEn  String?
+  videoUrl    String?
+  image       String?
+  type        String   @default("text")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SiteSetting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}
