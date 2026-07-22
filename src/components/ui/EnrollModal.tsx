@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { X, Scale, Send } from "lucide-react";
+import { X, Scale, Send, Loader2, CheckCircle } from "lucide-react";
 import { C, COURSES } from "@/lib/constants";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { sendToTelegram, formatDate } from "@/lib/telegram";
 
 interface EnrollModalProps {
   course?: string;
@@ -16,6 +17,8 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [course, setCourse] = useState(initialCourse || "");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
 
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
@@ -33,8 +36,10 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
     };
   }, [handleEscape]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!firstName.trim() || !lastName.trim() || !phone.trim()) return;
+
     const selectedCourse = COURSES.find((c) => String(c.id) === course);
     const courseName = selectedCourse
       ? lang === "UZ"
@@ -43,9 +48,19 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
         ? selectedCourse.title_ru
         : selectedCourse.title
       : course;
-    const message = `New Course Application%0A%0AFirst Name: ${firstName}%0ALast Name: ${lastName}%0APhone: ${phone}%0AAddress: ${address}%0ACourse: ${courseName}`;
-    window.open(`https://t.me/tashkentlawschool?text=${message}`, "_blank");
-    onClose();
+
+    setSending(true);
+    const dateStr = formatDate();
+    const text = `<b>🎓 Yangi ariza — Kursga yozilish</b>\n━━━━━━━━━━━━━━━━━━━\n\n👤 <b>Ism:</b>  ${firstName.trim()}\n👤 <b>Familiya:</b>  ${lastName.trim()}\n📞 <b>Telefon:</b>  ${phone.trim()}\n📍 <b>Manzil:</b>  ${address.trim() || "—"}\n📚 <b>Kurs:</b>  ${courseName}\n\n━━━━━━━━━━━━━━━━━━━\n📅 ${dateStr}`;
+    const result = await sendToTelegram(text);
+    if (result.success) {
+      setSent(true);
+      setTimeout(() => {
+        setSent(false);
+        onClose();
+      }, 1500);
+    }
+    setSending(false);
   };
 
   return (
@@ -91,10 +106,7 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label
-                className="block text-xs font-medium mb-1.5 font-sans"
-                style={{ color: C.secondary }}
-              >
+              <label className="block text-xs font-medium mb-1.5 font-sans" style={{ color: C.secondary }}>
                 {t.firstname || "First Name"}
               </label>
               <input
@@ -104,26 +116,13 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="John"
                 className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300 font-sans"
-                style={{
-                  background: "#141414",
-                  border: `1px solid ${C.border}`,
-                  color: C.white,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = C.gold;
-                  e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = C.border;
-                  e.currentTarget.style.boxShadow = "none";
-                }}
+                style={{ background: "#141414", border: `1px solid ${C.border}`, color: C.white }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "none"; }}
               />
             </div>
             <div>
-              <label
-                className="block text-xs font-medium mb-1.5 font-sans"
-                style={{ color: C.secondary }}
-              >
+              <label className="block text-xs font-medium mb-1.5 font-sans" style={{ color: C.secondary }}>
                 {t.lastname || "Last Name"}
               </label>
               <input
@@ -133,28 +132,15 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Doe"
                 className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300 font-sans"
-                style={{
-                  background: "#141414",
-                  border: `1px solid ${C.border}`,
-                  color: C.white,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = C.gold;
-                  e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = C.border;
-                  e.currentTarget.style.boxShadow = "none";
-                }}
+                style={{ background: "#141414", border: `1px solid ${C.border}`, color: C.white }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "none"; }}
               />
             </div>
           </div>
 
           <div>
-            <label
-              className="block text-xs font-medium mb-1.5 font-sans"
-              style={{ color: C.secondary }}
-            >
+            <label className="block text-xs font-medium mb-1.5 font-sans" style={{ color: C.secondary }}>
               {t.phone || "Phone Number"}
             </label>
             <input
@@ -164,27 +150,14 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+998 XX XXX XX XX"
               className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300 font-sans"
-              style={{
-                background: "#141414",
-                border: `1px solid ${C.border}`,
-                color: C.white,
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = C.gold;
-                e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`;
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = C.border;
-                e.currentTarget.style.boxShadow = "none";
-              }}
+              style={{ background: "#141414", border: `1px solid ${C.border}`, color: C.white }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "none"; }}
             />
           </div>
 
           <div>
-            <label
-              className="block text-xs font-medium mb-1.5 font-sans"
-              style={{ color: C.secondary }}
-            >
+            <label className="block text-xs font-medium mb-1.5 font-sans" style={{ color: C.secondary }}>
               {t.address || "Address"}
             </label>
             <input
@@ -193,27 +166,14 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Tashkent, ..."
               className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300 font-sans"
-              style={{
-                background: "#141414",
-                border: `1px solid ${C.border}`,
-                color: C.white,
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = C.gold;
-                e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`;
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = C.border;
-                e.currentTarget.style.boxShadow = "none";
-              }}
+              style={{ background: "#141414", border: `1px solid ${C.border}`, color: C.white }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "none"; }}
             />
           </div>
 
           <div>
-            <label
-              className="block text-xs font-medium mb-1.5 font-sans"
-              style={{ color: C.secondary }}
-            >
+            <label className="block text-xs font-medium mb-1.5 font-sans" style={{ color: C.secondary }}>
               {t.course_select || "Preferred Course"}
             </label>
             <select
@@ -221,26 +181,15 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
               value={course}
               onChange={(e) => setCourse(e.target.value)}
               className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all duration-300 font-sans appearance-none cursor-pointer"
-              style={{
-                background: "#141414",
-                border: `1px solid ${C.border}`,
-                color: C.white,
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = C.gold;
-                e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`;
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = C.border;
-                e.currentTarget.style.boxShadow = "none";
-              }}
+              style={{ background: "#141414", border: `1px solid ${C.border}`, color: C.white }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "none"; }}
             >
               <option value="" disabled style={{ background: C.card, color: C.muted }}>
                 {t.course_select || "Select a course..."}
               </option>
               {COURSES.map((c) => {
-                const courseTitle =
-                  lang === "UZ" ? c.title_uz : lang === "RU" ? c.title_ru : c.title;
+                const courseTitle = lang === "UZ" ? c.title_uz : lang === "RU" ? c.title_ru : c.title;
                 return (
                   <option key={c.id} value={c.id} style={{ background: C.card, color: C.white }}>
                     {courseTitle}
@@ -252,15 +201,17 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
 
           <button
             type="submit"
-            className="w-full py-3.5 rounded-xl flex items-center justify-center gap-2 font-semibold text-sm font-sans transition-all duration-300 hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-[0.98]"
-            style={{
-              background: C.btnGrad,
-              color: C.bg,
-              boxShadow: C.btnShadow,
-            }}
+            disabled={sending || sent}
+            className="w-full py-3.5 rounded-xl flex items-center justify-center gap-2 font-semibold text-sm font-sans transition-all duration-300 hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-[0.98] disabled:opacity-60 disabled:hover:translate-y-0"
+            style={{ background: sent ? "#22c55e" : C.btnGrad, color: C.bg, boxShadow: C.btnShadow }}
           >
-            <Send className="w-4 h-4" />
-            {t.submit_enroll || "Submit Application"}
+            {sent ? (
+              <><CheckCircle className="w-4 h-4" />Ariza qabul qilindi!</>
+            ) : sending ? (
+              <><Loader2 className="w-4 h-4 animate-spin" />Jo'natilmoqda...</>
+            ) : (
+              <><Send className="w-4 h-4" />{t.submit_enroll || "Submit Application"}</>
+            )}
           </button>
         </form>
       </div>

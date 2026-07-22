@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
-import { MapPin, Phone, Mail, Clock, Send, MessageCircle, Instagram, Facebook, Youtube, Linkedin } from "lucide-react";
+import { useMemo, useState } from "react";
+import { MapPin, Phone, Mail, Clock, Send, MessageCircle, Instagram, Facebook, Youtube, Linkedin, CheckCircle, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useApiSingle } from "@/hooks/useApiData";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { C } from "@/lib/constants";
 import { AnimatedText } from "@/components/ui/AnimatedText";
+import { sendToTelegram, formatDate } from "@/lib/telegram";
 
 interface Settings {
   id: number;
@@ -25,6 +26,12 @@ export function Contact() {
   const { lang, t } = useLanguage();
   const { data: settings } = useApiSingle<Settings>("/api/settings");
 
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
   const contactInfo = useMemo(() => {
     if (!settings) return [];
     return [
@@ -35,9 +42,21 @@ export function Contact() {
     ];
   }, [settings, lang]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    window.open("https://t.me/tashkentlawschool", "_blank");
+    if (!name.trim() || !phone.trim()) return;
+    setSending(true);
+    const dateStr = formatDate();
+    const text = `<b>📬 Yangi xabar — Kontakt formasi</b>\n━━━━━━━━━━━━━━━━━━━\n\n👤 <b>Ism:</b>  ${name.trim()}\n📞 <b>Telefon:</b>  ${phone.trim()}\n💬 <b>Xabar:</b>  ${message.trim() || "—"}\n\n━━━━━━━━━━━━━━━━━━━\n📅 ${dateStr}`;
+    const result = await sendToTelegram(text);
+    if (result.success) {
+      setSent(true);
+      setName("");
+      setPhone("");
+      setMessage("");
+      setTimeout(() => setSent(false), 3000);
+    }
+    setSending(false);
   };
 
   const socials = [
@@ -119,29 +138,48 @@ export function Contact() {
               Send us a message
             </h3>
             <div className="space-y-4">
-              {[
-                { label: t.name, placeholder: "Your full name", type: "text" },
-                { label: t.phone, placeholder: "+998 90 000 00 00", type: "tel" },
-              ].map((field, i) => (
-                <div key={i}>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>
-                    {field.label}
-                  </label>
-                  <input
-                    type={field.type}
-                    placeholder={field.placeholder}
-                    className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                    style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: `1px solid ${C.border}`,
-                      color: C.white,
-                      fontFamily: "'Inter', sans-serif",
-                    }}
-                    onFocus={(e) => (e.target.style.borderColor = "rgba(236,198,103,0.5)")}
-                    onBlur={(e) => (e.target.style.borderColor = C.border)}
-                  />
-                </div>
-              ))}
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>
+                  {t.name}
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Your full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: `1px solid ${C.border}`,
+                    color: C.white,
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = "rgba(236,198,103,0.5)")}
+                  onBlur={(e) => (e.target.style.borderColor = C.border)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>
+                  {t.phone}
+                </label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="+998 90 000 00 00"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: `1px solid ${C.border}`,
+                    color: C.white,
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = "rgba(236,198,103,0.5)")}
+                  onBlur={(e) => (e.target.style.borderColor = C.border)}
+                />
+              </div>
               <div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>
                   Message
@@ -149,6 +187,8 @@ export function Contact() {
                 <textarea
                   placeholder="How can we help you?"
                   rows={4}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all resize-none"
                   style={{
                     background: "rgba(255,255,255,0.04)",
@@ -162,15 +202,22 @@ export function Contact() {
               </div>
               <button
                 type="submit"
-                className="w-full py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0.5"
+                disabled={sending || sent}
+                className="w-full py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
                 style={{
-                  background: C.btnGrad,
+                  background: sent ? "#22c55e" : C.btnGrad,
                   color: C.bg,
                   fontFamily: "'Inter', sans-serif",
                   boxShadow: C.btnShadow,
                 }}
               >
-                <Send size={15} /> Send Message via Telegram
+                {sent ? (
+                  <><CheckCircle size={15} /> Sent!</>
+                ) : sending ? (
+                  <><Loader2 size={15} className="animate-spin" /> Sending...</>
+                ) : (
+                  <><Send size={15} /> Send Message</>
+                )}
               </button>
             </div>
           </form>

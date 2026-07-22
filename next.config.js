@@ -3,7 +3,7 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
-      { protocol: 'http', hostname: 'localhost', port: '3030' },
+      { protocol: 'https', hostname: 'tashkentlaw.ilmify-edu.uz' },
     ],
     formats: ['image/avif', 'image/webp'],
   },
@@ -11,7 +11,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3030'}/api/:path*`,
+        destination: `${process.env.NEXT_PUBLIC_API_URL || 'https://tashkentlaw.ilmify-edu.uz'}/api/:path*`,
       },
     ];
   },
