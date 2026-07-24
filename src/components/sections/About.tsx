@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Play, Scale, Shield, Users, Globe, ArrowRight } from "lucide-react";
+import { Play, Scale, Shield, Users, Globe, ArrowRight, Award, BookOpen, GraduationCap } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -45,6 +45,22 @@ interface TimelineItemData {
   description_en: string;
 }
 
+interface StatItem {
+  id: number;
+  value: number;
+  suffix?: string;
+  label_uz: string;
+  label_ru: string;
+  label_en: string;
+  order: number;
+}
+
+const ALL_VALUE_ICONS: Record<string, any> = {
+  integrity: Scale, excellence: Shield, community: Users, innovation: Globe,
+  leadership: Award, growth: GraduationCap, education: BookOpen,
+  trust: Shield, quality: Award, global: Globe, support: Users,
+};
+
 function GoldText({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <motion.span
@@ -66,37 +82,14 @@ function GoldText({ children, className = "" }: { children: React.ReactNode; cla
   );
 }
 
-const VALUE_ICONS: Record<string, any> = {
-  integrity: Scale,
-  excellence: Shield,
-  community: Users,
-  innovation: Globe,
-};
-
-const VALUE_KEYS = ["integrity", "excellence", "community", "innovation"];
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.12 },
-  },
-} as const;
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: "easeOut" },
-  },
-} as const;
+const VALUE_ICONS: Record<string, any> = ALL_VALUE_ICONS;
 
 export function About() {
   const { lang, t } = useLanguage();
   const { data: aboutData, loading } = useApiData<AboutData>('/api/about');
   const { data: valuesData } = useApiData<AboutValue>('/api/about-values');
   const { data: timelineData } = useApiData<TimelineItemData>('/api/timeline');
+  const { data: statsData } = useApiData<StatItem>('/api/statistics/public');
   const about = !loading && aboutData.length > 0 ? aboutData[0] : null;
 
   const lng = lang.toLowerCase();
@@ -214,31 +207,36 @@ export function About() {
               </div>
             </div>
 
-            {/* Floating badge */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="absolute -bottom-6 -right-6 px-6 py-4 rounded-2xl shadow-2xl"
-              style={{
-                background: C.burGrad,
-                border: `1px solid ${C.burgundy}`,
-              }}
-            >
-              <p
-                className="font-serif text-3xl md:text-4xl font-bold leading-none mb-1"
-                style={{ color: C.gold }}
-              >
-                12+
-              </p>
-              <p
-                className="text-xs uppercase tracking-wider font-sans"
-                style={{ color: C.white }}
-              >
-                {t.about_years}
-              </p>
-            </motion.div>
+            {/* Floating badge - uses first stat from API or fallback */}
+            {(() => {
+              const statsArr = Array.isArray(statsData) ? statsData : [];
+              const firstStat = statsArr.length > 0 ? statsArr[0] : null;
+              const badgeVal = firstStat ? firstStat.value : 12;
+              const badgeSuffix = firstStat ? (firstStat.suffix || "+") : "+";
+              const badgeLabel = firstStat
+                ? ((firstStat as unknown as Record<string, string>)[`label_${lng}`] || firstStat.label_en)
+                : (lang === "UZ" ? "Yillik mukammallik" : lang === "RU" ? "Лет опыта" : "Years of Excellence");
+              return (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="absolute -bottom-6 -right-6 px-6 py-4 rounded-2xl shadow-2xl"
+                  style={{
+                    background: C.burGrad,
+                    border: `1px solid ${C.burgundy}`,
+                  }}
+                >
+                  <p className="font-serif text-3xl md:text-4xl font-bold leading-none mb-1" style={{ color: C.gold }}>
+                    {badgeVal}{badgeSuffix}
+                  </p>
+                  <p className="text-xs uppercase tracking-wider font-sans" style={{ color: C.white }}>
+                    {badgeLabel}
+                  </p>
+                </motion.div>
+              );
+            })()}
           </motion.div>
 
           {/* RIGHT — Mission, Vision, Value cards */}
@@ -280,16 +278,21 @@ export function About() {
               </p>
             </div>
 
-            {/* Value cards 2x2 grid */}
+            {/* Value cards - all from API or fallback */}
             <div className="grid grid-cols-2 gap-4">
-              {VALUE_KEYS.map((key) => {
-                const apiVal = values.find((v) => v.key === key);
-                const Icon = VALUE_ICONS[key] || Scale;
-                const title = apiVal ? getMultilang(apiVal, "title") : (t as any)[`about_value_${key}`] || "";
-                const desc = apiVal ? getMultilang(apiVal, "description") : (t as any)[`about_value_${key}_desc`] || "";
+              {(values.length > 0 ? values : [
+                { id: 0, key: "integrity", title_uz: "Halollik", title_ru: "Честность", title_en: "Integrity", description_uz: "Yuridik ta'lim va amaliyotda eng yuqori axloqiy standartlarni qo'llab-quvvatlash.", description_ru: "", description_en: "", order: 0 } as AboutValue,
+                { id: 1, key: "excellence", title_uz: "Mukammallik", title_ru: "Превосходство", title_en: "Excellence", description_uz: "Har bir dasturda akademik qat'iyat va professional mahoratga intilish.", description_ru: "", description_en: "", order: 1 } as AboutValue,
+                { id: 2, key: "community", title_uz: "Hamjamiyat", title_ru: "Сообщество", title_en: "Community", description_uz: "Talabalar, bitiruvchilar va yuridik mutaxassislarning qo'llab-quvvatlovchi tarmog'ini qurish.", description_ru: "", description_en: "", order: 2 } as AboutValue,
+                { id: 3, key: "innovation", title_uz: "Innovatsiya", title_ru: "Инновации", title_en: "Innovation", description_uz: "Zamonaviy o'qitish usullari va global huquqiy istiqbollarni qabul qilish.", description_ru: "", description_en: "", order: 3 } as AboutValue,
+              ]).map((val) => {
+                const apiVal = values.find((v) => v.key === val.key) || val;
+                const Icon = VALUE_ICONS[val.key] || Scale;
+                const title = getMultilang(apiVal, "title");
+                const desc = getMultilang(apiVal, "description");
                 return (
                   <motion.div
-                    key={key}
+                    key={val.id}
                     whileHover={{ y: -4 }}
                     className="p-4 md:p-5 rounded-2xl transition-all duration-300 cursor-default"
                     style={{

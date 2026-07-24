@@ -14,6 +14,7 @@ interface StatItem {
   label_en: string;
   value: number;
   order: number;
+  suffix?: string;
 }
 
 const iconList: LucideIcon[] = [Users, Award, BookOpen, GraduationCap, Scale, Globe];
@@ -96,7 +97,7 @@ export function Stats() {
     ? statsData.map((item, index) => ({
         icon: iconList[index % iconList.length],
         value: item.value,
-        suffix: "+",
+        suffix: item.suffix || "+",
         labelKey: (item as unknown as Record<string, string>)[`label_${lang.toLowerCase()}`] || item.label_en,
         id: item.id,
       }))
