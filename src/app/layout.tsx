@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import { VideoBackground } from "@/components/ui/VideoBackground";
 import { VisitTracker } from "@/components/VisitTracker";
 import { COURSES, FAQS } from "@/lib/constants";
 import "./globals.css";
@@ -237,7 +236,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <LanguageProvider>
           <VisitTracker />
-          <VideoBackground />
           <main className="relative z-10 min-h-screen">{children}</main>
         </LanguageProvider>
       </body>

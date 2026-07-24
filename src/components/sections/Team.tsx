@@ -22,7 +22,7 @@ export function Team() {
   }>('/api/team?is_active=true');
 
   return (
-    <section id="team" className="relative overflow-hidden py-10 md:py-16 section-glass" style={{ background: "rgba(11,11,11,0.45)" }}>
+    <section id="team" className="relative overflow-hidden py-10 md:py-16 section-glass" style={{ background: "rgba(13,13,13,0.5)" }}>
       <div className="absolute inset-0 pointer-events-none" style={{ background: C.sectionGlow }} />
       <div className="max-w-[1400px] mx-auto px-4 md:px-6 relative z-10">
         <div className="text-center mb-10 md:mb-16">

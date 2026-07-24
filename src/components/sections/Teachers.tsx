@@ -37,7 +37,7 @@ export function Teachers() {
   const { data: teachers, loading } = useApiData<TeacherData>("/api/teachers?is_active=true");
 
   return (
-    <section id="teachers" style={{ background: "rgba(11,11,11,0.45)" }} className="relative overflow-hidden py-10 md:py-16">
+    <section id="teachers" style={{ background: "rgba(13,13,13,0.5)" }} className="relative overflow-hidden py-10 md:py-16">
       <div className="absolute inset-0 pointer-events-none" style={{ background: C.sectionGlow }} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center mb-10 md:mb-16">

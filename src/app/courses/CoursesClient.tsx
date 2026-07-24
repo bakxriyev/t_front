@@ -6,21 +6,21 @@ import { Footer } from "@/components/layout/Footer";
 import { Courses } from "@/components/sections/Courses";
 import { Stats } from "@/components/sections/Stats";
 import { EnrollModal } from "@/components/ui/EnrollModal";
-import { COURSES } from "@/lib/constants";
 
 export default function CoursesClient() {
   const [enrollCourse, setEnrollCourse] = useState<string | null>(null);
+  const [showEnroll, setShowEnroll] = useState(false);
 
   return (
     <div>
       <Navbar />
       <div style={{ paddingTop: "90px" }}>
-        <Courses onEnroll={(c) => setEnrollCourse(c)} />
+        <Courses onEnroll={(c) => { setShowEnroll(true); setEnrollCourse(c); }} />
         <Stats />
       </div>
       <Footer />
-      {enrollCourse && (
-        <EnrollModal course={enrollCourse} onClose={() => setEnrollCourse(null)} />
+      {showEnroll && (
+        <EnrollModal course={enrollCourse} onClose={() => { setShowEnroll(false); setEnrollCourse(null); }} />
       )}
     </div>
   );

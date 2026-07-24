@@ -25,6 +25,20 @@ interface HeroSlide {
   image: string;
   order: number;
   is_active: boolean;
+  title_font_size?: string;
+  subtitle_font_size?: string;
+  description_font_size?: string;
+  title_font_weight?: string;
+  subtitle_font_weight?: string;
+  description_font_weight?: string;
+  text_align?: string;
+  max_width?: string;
+}
+
+function val(slide: HeroSlide | null, key: string, def: string): string {
+  if (!slide) return def;
+  const v = (slide as unknown as Record<string, string | undefined>)[key];
+  return v && v.trim() ? v : def;
 }
 
 export function Hero({ onApply }: { onApply: () => void }) {
@@ -38,6 +52,16 @@ export function Hero({ onApply }: { onApply: () => void }) {
   const description = slide ? (slide as unknown as Record<string, string>)[`description_${lng}`] || (slide as unknown as Record<string, string>)[`description_en`] || "" : t.hero_body;
   const buttonText = slide ? (slide as unknown as Record<string, string>)[`button_text_${lng}`] || (slide as unknown as Record<string, string>)[`button_text_en`] || "" : t.enroll;
   const buttonLink = slide?.button_link || "#about";
+
+  const titleSize = val(slide, "title_font_size", "4.5rem");
+  const titleWeight = val(slide, "title_font_weight", "700");
+  const subSize = val(slide, "subtitle_font_size", "1.125rem");
+  const subWeight = val(slide, "subtitle_font_weight", "400");
+  const descSize = val(slide, "description_font_size", "1rem");
+  const descWeight = val(slide, "description_font_weight", "400");
+  const align = val(slide, "text_align", "center");
+  const maxW = val(slide, "max_width", "100%");
+
   return (
     <section id="home" className="relative min-h-[90vh] md:min-h-screen flex items-center overflow-hidden" style={{ paddingTop: "90px" }}>
       <div className="absolute inset-0 pointer-events-none">
@@ -62,7 +86,7 @@ export function Hero({ onApply }: { onApply: () => void }) {
       <div className="absolute right-0 top-0 bottom-0 w-px hidden lg:block" style={{ background: `linear-gradient(180deg, transparent 0%, ${C.gold}20 30%, ${C.gold}20 70%, transparent 100%)` }} />
 
       <div className="max-w-[1200px] mx-auto px-4 md:px-6 w-full relative z-10">
-        <div className="max-w-4xl mx-auto text-center">
+        <div style={{ maxWidth: maxW, margin: "0 auto", textAlign: align as React.CSSProperties["textAlign"] }}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -79,8 +103,8 @@ export function Hero({ onApply }: { onApply: () => void }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-[1.75rem] sm:text-4xl md:text-6xl xl:text-[4.5rem] font-bold leading-[1.08] mb-4 md:mb-6 font-serif"
-            style={{ color: C.white }}
+            className="font-serif leading-[1.08] mb-4 md:mb-6"
+            style={{ color: C.white, fontSize: titleSize, fontWeight: Number(titleWeight) || 700 }}
           >
             {title}
           </motion.h1>
@@ -89,8 +113,8 @@ export function Hero({ onApply }: { onApply: () => void }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.8 }}
-            className="text-base md:text-lg italic mb-3 font-serif"
-            style={{ color: C.gold }}
+            className="italic mb-3 font-serif"
+            style={{ color: C.gold, fontSize: subSize, fontWeight: Number(subWeight) || 400 }}
           >
             &mdash; {subtitle}
           </motion.p>
@@ -100,8 +124,8 @@ export function Hero({ onApply }: { onApply: () => void }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 1.0 }}
-              className="text-xs sm:text-sm md:text-base leading-relaxed mb-6 md:mb-10 max-w-2xl mx-auto font-sans"
-              style={{ color: C.secondary }}
+              className="leading-relaxed mb-6 md:mb-10 mx-auto font-sans"
+              style={{ color: C.secondary, fontSize: descSize, fontWeight: Number(descWeight) || 400, maxWidth: "42rem" }}
             >
               {description}
             </motion.p>
@@ -157,19 +181,7 @@ export function Hero({ onApply }: { onApply: () => void }) {
           </motion.div>
         </div>
 
-        <motion.div
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ duration: 1, delay: 1.8, ease: "easeOut" }}
-          className="absolute bottom-0 left-[10%] right-[10%] h-px origin-left"
-          style={{ background: `linear-gradient(90deg, transparent, ${C.gold}30, ${C.gold}50, ${C.gold}30, transparent)` }}
-        />
       </div>
-
-      <div className="absolute top-[10%] left-[4%] w-16 h-16 border-l-2 border-t-2 rounded-tl-xl hidden xl:block" style={{ borderColor: "rgba(212,175,55,0.08)" }} />
-      <div className="absolute top-[10%] right-[4%] w-16 h-16 border-r-2 border-t-2 rounded-tr-xl hidden xl:block" style={{ borderColor: "rgba(212,175,55,0.08)" }} />
-      <div className="absolute bottom-[15%] left-[4%] w-16 h-16 border-l-2 border-b-2 rounded-bl-xl hidden xl:block" style={{ borderColor: "rgba(212,175,55,0.08)" }} />
-      <div className="absolute bottom-[15%] right-[4%] w-16 h-16 border-r-2 border-b-2 rounded-br-xl hidden xl:block" style={{ borderColor: "rgba(212,175,55,0.08)" }} />
     </section>
   );
 }

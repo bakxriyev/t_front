@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { VideoBackground } from "@/components/ui/VideoBackground";
 import { Hero } from "@/components/sections/Hero";
 import { Stats } from "@/components/sections/Stats";
 import { About } from "@/components/sections/About";
@@ -17,12 +18,13 @@ import { Vacancies } from "@/components/sections/Vacancies";
 import { FAQ } from "@/components/sections/FAQ";
 import { Contact } from "@/components/sections/Contact";
 import { EnrollModal } from "@/components/ui/EnrollModal";
-import { C, COURSES } from "@/lib/constants";
+import { C } from "@/lib/constants";
 import { Send, ArrowUp } from "lucide-react";
 import { useEffect } from "react";
 
 export default function Home() {
   const [enrollCourse, setEnrollCourse] = useState<string | null>(null);
+  const [showEnroll, setShowEnroll] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   useEffect(() => {
@@ -33,11 +35,12 @@ export default function Home() {
 
   return (
     <div style={{ color: C.white, fontFamily: "'Inter', sans-serif" }}>
+      <VideoBackground />
       <Navbar />
-      <Hero onApply={() => setEnrollCourse(COURSES[0].title)} />
+      <Hero onApply={() => { setShowEnroll(true); setEnrollCourse(null); }} />
       <Stats />
       <About />
-      <Courses onEnroll={(c) => setEnrollCourse(c)} />
+      <Courses onEnroll={(c) => { setShowEnroll(true); setEnrollCourse(c); }} />
       <Teachers />
       <Results />
       <Testimonials />
@@ -53,8 +56,8 @@ export default function Home() {
       </div>
       <Footer />
 
-      {enrollCourse && (
-        <EnrollModal course={enrollCourse} onClose={() => setEnrollCourse(null)} />
+      {showEnroll && (
+        <EnrollModal course={enrollCourse} onClose={() => { setShowEnroll(false); setEnrollCourse(null); }} />
       )}
 
       <a

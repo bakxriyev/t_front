@@ -6,7 +6,7 @@ import { C } from "@/lib/constants";
 import { getImageUrl } from "@/lib/utils";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { GoldText } from "@/components/ui/GoldText";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowRight, Clock, Eye } from "lucide-react";
 import Link from "next/link";
 
 type NewsItem = {
@@ -16,6 +16,7 @@ type NewsItem = {
   content_uz: string; content_ru: string; content_en: string;
   image?: string;
   created_at: string;
+  views?: number;
 };
 
 function NewsCard({
@@ -24,12 +25,14 @@ function NewsCard({
   date,
   excerpt,
   img,
+  views,
 }: {
   id: number;
   title: string;
   date: string;
   excerpt: string;
   img: string;
+  views?: number;
 }) {
   return (
     <div
@@ -51,23 +54,26 @@ function NewsCard({
       </div>
 
       <div className="p-4 md:p-6">
-        <div className="flex items-center gap-3 text-xs mb-4" style={{ color: C.muted, fontFamily: "'Inter', sans-serif" }}>
-          <div className="flex items-center gap-1">
-            <Clock size={12} />
-            <span>{date}</span>
+        <div className="flex items-center gap-3 text-xs mb-4 flex-wrap" style={{ color: C.muted, fontFamily: "'Inter', sans-serif" }}>
+          <div className="flex items-center gap-1.5">
+            <Clock size={13} style={{ color: C.gold }} />
+            <span style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>{date}</span>
           </div>
-          <span style={{ color: C.border, fontFamily: "'Inter', sans-serif" }}>|</span>
-          <span>TLS</span>
+          <span style={{ color: C.border }}>|</span>
+          <div className="flex items-center gap-1.5">
+            <Eye size={13} style={{ color: C.gold }} />
+            <span style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>{views ?? 0}</span>
+          </div>
         </div>
 
         <h3
-          className="text-[15px] font-semibold leading-snug mb-3"
+          className="text-[16px] font-semibold leading-snug mb-3 line-clamp-2"
           style={{ fontFamily: "'Playfair Display', serif", color: C.white }}
         >
           {title}
         </h3>
 
-        <p className="text-sm leading-relaxed mb-4" style={{ fontFamily: "'Inter', sans-serif", color: C.muted }}>
+        <p className="text-sm leading-relaxed mb-4 line-clamp-3" style={{ fontFamily: "'Inter', sans-serif", color: C.muted }}>
           {excerpt}
         </p>
 
@@ -134,6 +140,7 @@ export function NewsSection({ showAll = false }: { showAll?: boolean }) {
                 date={formatDate(item.created_at)}
                 excerpt={(item as any)[`excerpt_${lang.toLowerCase()}`] || (item as any)[`excerpt_en`] || ""}
                 img={getImageUrl(item.image)}
+                views={item.views}
               />
             ))}
           </div>

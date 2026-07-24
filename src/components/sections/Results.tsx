@@ -43,7 +43,7 @@ export function Results() {
 
   if (loading) {
     return (
-      <section className="relative overflow-hidden py-10 md:py-16" style={{ background: "rgba(11,11,11,0.45)" }}>
+      <section className="relative overflow-hidden py-10 md:py-16" style={{ background: "rgba(13,13,13,0.5)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <SectionLabel>{t.results_label || "Track Record"}</SectionLabel>
           <h2 className="text-2xl sm:text-5xl font-bold mb-10" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -88,7 +88,7 @@ export function Results() {
   return (
     <section
       className="relative overflow-hidden py-10 md:py-16"
-      style={{ background: "rgba(11,11,11,0.45)" }}
+      style={{ background: "rgba(13,13,13,0.5)" }}
       id="results"
     >
       <div className="absolute inset-0 pointer-events-none" style={{ background: C.sectionGlow }} />

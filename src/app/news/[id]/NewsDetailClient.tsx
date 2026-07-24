@@ -7,7 +7,7 @@ import { Footer } from "@/components/layout/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { C } from "@/lib/constants";
 import { getImageUrl } from "@/lib/utils";
-import { Loader2, ArrowLeft, Calendar, ChevronRight } from "lucide-react";
+import { Loader2, ArrowLeft, Calendar, ChevronRight, Eye } from "lucide-react";
 import Link from "next/link";
 import api from "@/lib/api-client";
 
@@ -19,6 +19,7 @@ type NewsItem = {
   image?: string;
   status: string;
   created_at: string;
+  views?: number;
 };
 
 export default function NewsDetailClient() {
@@ -123,13 +124,16 @@ export default function NewsDetailClient() {
               </div>
             )}
 
-            <div className="flex items-center gap-4 text-sm mb-6" style={{ color: C.muted }}>
-              <div className="flex items-center gap-1">
-                <Calendar size={14} />
-                <span>{formatDate(data.created_at)}</span>
+            <div className="flex items-center gap-4 text-sm mb-6 flex-wrap" style={{ color: C.muted }}>
+              <div className="flex items-center gap-1.5">
+                <Calendar size={14} style={{ color: C.gold }} />
+                <span style={{ color: C.secondary }}>{formatDate(data.created_at)}</span>
               </div>
               <span style={{ color: C.border }}>|</span>
-              <span>TLS</span>
+              <div className="flex items-center gap-1.5">
+                <Eye size={14} style={{ color: C.gold }} />
+                <span style={{ color: C.secondary }}>{data.views ?? 0} ko'rishlar</span>
+              </div>
             </div>
 
             <h1

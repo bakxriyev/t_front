@@ -55,17 +55,10 @@
     animation: float 6s ease-in-out infinite;
   }
   .section-glow {
-    background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(139,58,58,0.12) 0%, transparent 70%);
-  }
-  .section-glow-top {
-    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(139,58,58,0.15) 0%, transparent 70%);
-  }
-  .section-glow-bottom {
-    background: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(139,58,58,0.15) 0%, transparent 70%);
+    background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(167,25,48,0.06) 0%, transparent 70%);
   }
   .section-glass {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    /* clean unified section — no blur artifacts */
   }
   .card-glass {
     background: rgba(30,30,30,0.7);

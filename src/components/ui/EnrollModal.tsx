@@ -1,17 +1,34 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { X, Scale, Send, Loader2, CheckCircle } from "lucide-react";
-import { C, COURSES } from "@/lib/constants";
+import { C } from "@/lib/constants";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useApiData } from "@/hooks/useApiData";
 import { sendToTelegram, formatDate } from "@/lib/telegram";
 
 interface EnrollModalProps {
-  course?: string;
+  course?: string | null;
   onClose: () => void;
+}
+
+interface CourseData {
+  id: number;
+  title_uz: string;
+  title_ru: string;
+  title_en: string;
+  description_uz: string;
+  description_ru: string;
+  description_en: string;
+  price: string;
+  duration: string;
+  level: string;
+  image: string;
+  order: number;
 }
 
 export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps) {
   const { lang, t } = useLanguage();
+  const { data: courses, loading: coursesLoading } = useApiData<CourseData>('/api/courses/offers?is_active=true');
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -19,6 +36,12 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
   const [course, setCourse] = useState(initialCourse || "");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    if (initialCourse) {
+      setCourse(initialCourse);
+    }
+  }, [initialCourse]);
 
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
@@ -40,13 +63,10 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim() || !phone.trim()) return;
 
-    const selectedCourse = COURSES.find((c) => String(c.id) === course);
+    const selectedCourse = courses.find((c) => String(c.id) === course);
+    const l = lang.toLowerCase();
     const courseName = selectedCourse
-      ? lang === "UZ"
-        ? selectedCourse.title_uz
-        : lang === "RU"
-        ? selectedCourse.title_ru
-        : selectedCourse.title
+      ? (selectedCourse as unknown as Record<string, string>)[`title_${l}`] || selectedCourse.title_en
       : course;
 
     setSending(true);
@@ -64,18 +84,19 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] overflow-y-auto">
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div
-        className="relative w-full max-w-lg rounded-3xl p-8 animate-fade-in-up"
-        style={{
-          background: C.card,
-          border: "1px solid rgba(236,198,103,0.3)",
-        }}
-      >
+      <div className="relative min-h-screen flex items-center justify-center p-4">
+        <div
+          className="relative w-full max-w-lg rounded-3xl p-6 md:p-8 animate-fade-in-up my-4"
+          style={{
+            background: C.card,
+            border: "1px solid rgba(236,198,103,0.3)",
+          }}
+        >
         <button
           onClick={onClose}
           className="absolute top-5 right-5 p-2 rounded-full transition-colors duration-200 hover:opacity-70"
@@ -186,12 +207,13 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
               onBlur={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "none"; }}
             >
               <option value="" disabled style={{ background: C.card, color: C.muted }}>
-                {t.course_select || "Select a course..."}
+                {coursesLoading ? "Loading..." : (t.course_select || "Select a course...")}
               </option>
-              {COURSES.map((c) => {
-                const courseTitle = lang === "UZ" ? c.title_uz : lang === "RU" ? c.title_ru : c.title;
+              {courses.map((c) => {
+                const l = lang.toLowerCase();
+                const courseTitle = (c as unknown as Record<string, string>)[`title_${l}`] || c.title_en;
                 return (
-                  <option key={c.id} value={c.id} style={{ background: C.card, color: C.white }}>
+                  <option key={c.id} value={String(c.id)} style={{ background: C.card, color: C.white }}>
                     {courseTitle}
                   </option>
                 );
@@ -206,14 +228,15 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
             style={{ background: sent ? "#22c55e" : C.btnGrad, color: C.bg, boxShadow: C.btnShadow }}
           >
             {sent ? (
-              <><CheckCircle className="w-4 h-4" />Ariza qabul qilindi!</>
+              <><CheckCircle className="w-4 h-4" />{t.application_sent || "Application received!"}</>
             ) : sending ? (
-              <><Loader2 className="w-4 h-4 animate-spin" />Jo'natilmoqda...</>
+              <><Loader2 className="w-4 h-4 animate-spin" />{t.sending_text || "Sending..."}</>
             ) : (
               <><Send className="w-4 h-4" />{t.submit_enroll || "Submit Application"}</>
             )}
           </button>
         </form>
+      </div>
       </div>
     </div>
   );

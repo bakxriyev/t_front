@@ -55,8 +55,8 @@ export function Navbar() {
           className="w-full flex items-center justify-between px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl transition-all duration-500"
           style={{
             background: scrolled
-              ? "linear-gradient(135deg, rgba(8,8,8,0.88), rgba(18,12,12,0.92))"
-              : "linear-gradient(135deg, rgba(8,8,8,0.55), rgba(18,12,12,0.6))",
+              ? "linear-gradient(135deg, rgba(8,8,8,0.96), rgba(18,12,12,0.97))"
+              : "linear-gradient(135deg, rgba(8,8,8,0.92), rgba(18,12,12,0.94))",
             backdropFilter: "blur(28px) saturate(1.5)",
             WebkitBackdropFilter: "blur(28px) saturate(1.5)",
             border: `1px solid ${scrolled ? "rgba(212,175,55,0.2)" : "rgba(255,255,255,0.05)"}`,

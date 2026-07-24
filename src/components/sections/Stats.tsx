@@ -90,7 +90,7 @@ const itemVariants = {
 
 export function Stats() {
   const { lang, t } = useLanguage();
-  const { data: statsData, loading } = useApiData<StatItem>('/api/statistics?is_active=true');
+  const { data: statsData, loading } = useApiData<StatItem>('/api/statistics/public');
 
   const stats = !loading && statsData.length > 0
     ? statsData.map((item, index) => ({
@@ -100,17 +100,23 @@ export function Stats() {
         labelKey: (item as unknown as Record<string, string>)[`label_${lang.toLowerCase()}`] || item.label_en,
         id: item.id,
       }))
+    : !loading ? [
+        { icon: Users, value: 1500, suffix: "+", labelKey: lang === "UZ" ? "Talabalar" : lang === "RU" ? "Студентов" : "Students", id: 0 },
+        { icon: Award, value: 12, suffix: "+", labelKey: lang === "UZ" ? "Yillik tajriba" : lang === "RU" ? "Лет опыта" : "Years Experience", id: 1 },
+        { icon: GraduationCap, value: 3200, suffix: "+", labelKey: lang === "UZ" ? "Bitiruvchilar" : lang === "RU" ? "Выпускников" : "Graduates", id: 2 },
+        { icon: Scale, value: 95, suffix: "%", labelKey: lang === "UZ" ? "Ish bilan ta'minlash" : lang === "RU" ? "Трудоустройство" : "Employment Rate", id: 3 },
+        { icon: Globe, value: 100, suffix: "+", labelKey: lang === "UZ" ? "Xalqaro hamkorlar" : lang === "RU" ? "Межд. партнёров" : "Intl. Partners", id: 4 },
+        { icon: BookOpen, value: 6, suffix: "", labelKey: lang === "UZ" ? "Kurslar" : lang === "RU" ? "Курсов" : "Courses", id: 5 },
+      ]
     : [];
 
   if (stats.length === 0) return null;
 
   return (
     <section
-      className="relative py-8 md:py-16 overflow-hidden section-glass"
+      className="relative py-8 md:py-16 overflow-hidden"
       style={{
         background: "rgba(14,14,14,0.5)",
-        borderTop: `1px solid ${C.border}`,
-        borderBottom: `1px solid ${C.border}`,
       }}
     >
       <div className="absolute inset-0 pointer-events-none" style={{ background: C.sectionGlow }} />

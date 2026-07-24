@@ -50,33 +50,10 @@ export function VideoBackground() {
         <source src="/videos/bg.mp4" type="video/mp4" />
       </video>
 
-      {/* Overlay gradients */}
+      {/* Overlay - single clean gradient */}
       <div className="absolute inset-0" style={{
-        background: `
-          radial-gradient(ellipse 80% 60% at 50% 0%, rgba(167,25,48,0.12) 0%, transparent 70%),
-          radial-gradient(ellipse 60% 50% at 80% 30%, rgba(212,175,55,0.06) 0%, transparent 60%),
-          radial-gradient(ellipse 50% 40% at 20% 50%, rgba(139,58,58,0.08) 0%, transparent 50%),
-          linear-gradient(180deg, rgba(11,11,11,0.15) 0%, rgba(11,11,11,0.35) 50%, rgba(11,11,11,0.65) 100%)
-        `,
+        background: `linear-gradient(180deg, rgba(11,11,11,0.25) 0%, rgba(11,11,11,0.55) 60%, rgba(11,11,11,0.85) 100%)`,
       }} />
-
-      {/* Noise grain */}
-      <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          backgroundRepeat: "repeat",
-          backgroundSize: "256px 256px",
-        }}
-      />
-
-      {/* Gold vignette */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `radial-gradient(ellipse 40% 30% at 50% 50%, rgba(212,175,55,0.03) 0%, transparent 70%)`,
-        }}
-      />
     </div>
   );
 }

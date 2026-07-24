@@ -181,7 +181,7 @@ export function Courses({ onEnroll }: CoursesProps) {
                   </div>
 
                   <button
-                    onClick={() => onEnroll(course.title_en)}
+                    onClick={() => onEnroll(String(course.id))}
                     className="w-full py-3 px-6 rounded-xl text-sm font-semibold transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-[0.98]"
                     style={{
                         background: C.btnGrad,
