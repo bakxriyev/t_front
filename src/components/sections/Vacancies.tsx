@@ -6,7 +6,7 @@ import { SectionLabel } from "@/components/ui/SectionLabel";
 import { AnimatedText } from "@/components/ui/AnimatedText";
 import { C } from "@/lib/constants";
 import { useApiData } from "@/hooks/useApiData";
-import { X, Send, Loader2, CheckCircle, Briefcase, MapPin, DollarSign, Clock, ChevronRight } from "lucide-react";
+import { X, Send, Loader2, CheckCircle, Briefcase, MapPin, DollarSign, Clock, ChevronRight, AlertCircle } from "lucide-react";
 import { sendToTelegram, formatDate } from "@/lib/telegram";
 
 interface VacancyData {
@@ -17,6 +17,10 @@ interface VacancyData {
   salary: string;
   type: string;
   is_active: boolean;
+}
+
+function typeLabel(t: string): string {
+  return t.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
 }
 
 function VacancyDetailModal({
@@ -45,7 +49,7 @@ function VacancyDetailModal({
           style={{ background: C.card, border: "1px solid rgba(236,198,103,0.3)", maxHeight: "90vh", display: "flex", flexDirection: "column" }}
         >
           <div className="sticky top-0 z-10 flex items-center justify-between p-6 pb-4" style={{ background: C.card }}>
-            <h2 className="text-xl md:text-2xl font-bold pr-8" style={{ fontFamily: "'Playfair Display', serif", color: C.white }}>
+            <h2 className="text-xl md:text-2xl font-bold pr-8 font-serif" style={{ color: C.white }}>
               {title}
             </h2>
             <button onClick={onClose} className="absolute top-5 right-5 p-2 rounded-full transition-colors duration-200 hover:opacity-70" style={{ color: C.muted }} aria-label="Close">
@@ -56,12 +60,12 @@ function VacancyDetailModal({
           <div className="overflow-y-auto px-6 pb-6 space-y-5" style={{ flex: 1 }}>
             <div className="flex flex-wrap gap-3">
               {v.type && (
-                <span className="text-[11px] px-3 py-1 rounded-full font-medium" style={{ background: "rgba(255,255,255,0.06)", color: C.gold, fontFamily: "'Inter', sans-serif" }}>
-                  {v.type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                <span className="text-[11px] px-3 py-1 rounded-full font-medium font-sans" style={{ background: "rgba(255,255,255,0.06)", color: C.gold }}>
+                  {typeLabel(v.type)}
                 </span>
               )}
               {v.salary && (
-                <span className="text-[11px] px-3 py-1 rounded-full font-medium flex items-center gap-1.5" style={{ background: "rgba(255,255,255,0.06)", color: C.secondary, fontFamily: "'Inter', sans-serif" }}>
+                <span className="text-[11px] px-3 py-1 rounded-full font-medium flex items-center gap-1.5 font-sans" style={{ background: "rgba(255,255,255,0.06)", color: C.secondary }}>
                   <DollarSign size={12} style={{ color: C.gold }} />{v.salary}
                 </span>
               )}
@@ -69,19 +73,19 @@ function VacancyDetailModal({
 
             {desc && (
               <div>
-                <h4 className="text-sm font-semibold mb-2" style={{ fontFamily: "'Inter', sans-serif", color: C.white }}>
+                <h4 className="text-sm font-semibold mb-2 font-sans" style={{ color: C.white }}>
                   {lang === "UZ" ? "Tavsif" : lang === "RU" ? "Описание" : "Description"}
                 </h4>
-                <p className="text-sm leading-relaxed" style={{ color: C.muted, fontFamily: "'Inter', sans-serif" }}>{desc}</p>
+                <p className="text-sm leading-relaxed font-sans" style={{ color: C.muted }}>{desc}</p>
               </div>
             )}
 
             {reqs && (
               <div>
-                <h4 className="text-sm font-semibold mb-2" style={{ fontFamily: "'Inter', sans-serif", color: C.white }}>
+                <h4 className="text-sm font-semibold mb-2 font-sans" style={{ color: C.white }}>
                   {t.requirements_label || "Requirements"}
                 </h4>
-                <p className="text-sm leading-relaxed" style={{ color: C.muted, fontFamily: "'Inter', sans-serif" }}>{reqs}</p>
+                <p className="text-sm leading-relaxed font-sans" style={{ color: C.muted }}>{reqs}</p>
               </div>
             )}
 
@@ -110,86 +114,93 @@ function ApplyForm({
   const [experience, setExperience] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firstName.trim() || !lastName.trim() || !phone.trim()) return;
 
     setSending(true);
+    setError("");
     const dateStr = formatDate();
     const text = `<b>💼 Yangi ariza — Vakansiyaga murojaat</b>\n━━━━━━━━━━━━━━━━━━━\n\n👤 <b>Ism:</b>  ${firstName.trim()}\n👤 <b>Familiya:</b>  ${lastName.trim()}\n📞 <b>Telefon:</b>  ${phone.trim()}\n💼 <b>Vakansiya:</b>  ${vacancyTitle}\n📋 <b>Tajriba:</b>  ${experience.trim() || "—"}\n\n━━━━━━━━━━━━━━━━━━━\n📅 ${dateStr}`;
     const result = await sendToTelegram(text, true);
+
     if (result.success) {
       setSent(true);
       setTimeout(() => {
         setSent(false);
         onClose();
       }, 1500);
+    } else {
+      setError(result.error || "Yuborishda xatolik");
     }
     setSending(false);
   };
 
+  const inputClass = "w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all duration-300 font-sans";
+  const inputStyle = { background: "#141414", border: `1px solid ${C.border}`, color: C.white };
+  const focusStyle = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.currentTarget.style.borderColor = C.gold;
+    e.currentTarget.style.boxShadow = `0 0 0 3px rgba(212,175,55,0.1)`;
+  };
+  const blurStyle = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.currentTarget.style.borderColor = C.border;
+    e.currentTarget.style.boxShadow = "none";
+  };
+
   return (
     <div>
-      <h4 className="text-base font-semibold mb-4 text-center" style={{ fontFamily: "'Playfair Display', serif", color: C.white }}>
+      <h4 className="text-base font-semibold mb-4 text-center font-serif" style={{ color: C.white }}>
         {t.apply_position || "Apply for Position"}
       </h4>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>{t.firstname || "First Name"}</label>
+            <label className="block text-xs font-medium mb-1 font-sans" style={{ color: C.secondary }}>{t.firstname || "First Name"}</label>
             <input type="text" required value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="John"
-              className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all duration-300"
-              style={{ background: "#141414", border: `1px solid ${C.border}`, color: C.white, fontFamily: "'Inter', sans-serif" }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "none"; }}
-            />
+              className={inputClass} style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>{t.lastname || "Last Name"}</label>
+            <label className="block text-xs font-medium mb-1 font-sans" style={{ color: C.secondary }}>{t.lastname || "Last Name"}</label>
             <input type="text" required value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe"
-              className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all duration-300"
-              style={{ background: "#141414", border: `1px solid ${C.border}`, color: C.white, fontFamily: "'Inter', sans-serif" }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "none"; }}
-            />
+              className={inputClass} style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>{t.phone || "Phone Number"}</label>
+          <label className="block text-xs font-medium mb-1 font-sans" style={{ color: C.secondary }}>{t.phone || "Phone Number"}</label>
           <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+998 XX XXX XX XX"
-            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all duration-300"
-            style={{ background: "#141414", border: `1px solid ${C.border}`, color: C.white, fontFamily: "'Inter', sans-serif" }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "none"; }}
-          />
+            className={inputClass} style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
         </div>
 
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>{t.experience_label || "Experience / About You"}</label>
+          <label className="block text-xs font-medium mb-1 font-sans" style={{ color: C.secondary }}>{t.experience_label || "Experience / About You"}</label>
           <textarea value={experience} onChange={(e) => setExperience(e.target.value)}
             placeholder={t.experience_placeholder || "Tell us about your experience..."}
-            rows={3}
-            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all duration-300 resize-none"
-            style={{ background: "#141414", border: `1px solid ${C.border}`, color: C.white, fontFamily: "'Inter', sans-serif" }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(236,198,103,0.1)`; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "none"; }}
-          />
+            rows={3} className={`${inputClass} resize-none`} style={inputStyle}
+            onFocus={focusStyle} onBlur={blurStyle} />
         </div>
+
+        {error && (
+          <div className="flex items-center gap-2 text-xs p-3 rounded-xl" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#EF4444" }}>
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            {error}
+          </div>
+        )}
 
         <button
           type="submit"
           disabled={sending || sent}
-          className="w-full py-3 rounded-xl flex items-center justify-center gap-2 font-semibold text-sm transition-all duration-300 hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-[0.98] disabled:opacity-60 disabled:hover:translate-y-0"
-          style={{ background: sent ? "#22c55e" : C.btnGrad, color: C.bg, fontFamily: "'Inter', sans-serif", boxShadow: C.btnShadow }}
+          className="w-full py-3 rounded-xl flex items-center justify-center gap-2 font-semibold text-sm transition-all duration-300 hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-[0.98] disabled:opacity-60 disabled:hover:translate-y-0 font-sans"
+          style={{ background: sent ? "#22c55e" : C.btnGrad, color: C.white, boxShadow: C.btnShadow }}
         >
           {sent ? (
-            <><CheckCircle className="w-4 h-4" />{t.application_sent || "Application received!"}</>
+            <><CheckCircle className="w-4 h-4" />{t.application_sent || "Ariza qabul qilindi!"}</>
           ) : sending ? (
-            <><Loader2 className="w-4 h-4 animate-spin" />{t.sending_text || "Sending..."}</>
+            <><Loader2 className="w-4 h-4 animate-spin" />{t.sending_text || "Yuborilmoqda..."}</>
           ) : (
-            <><Send className="w-4 h-4" />{t.submit_enroll || "Submit Application"}</>
+            <><Send className="w-4 h-4" />{t.submit_enroll || "Arizani yuborish"}</>
           )}
         </button>
       </form>
@@ -210,7 +221,7 @@ export function Vacancies() {
         <div className="text-center mb-10 md:mb-16">
           <SectionLabel>{t.vacancies_label}</SectionLabel>
           <AnimatedText text={t.vacancies_title} as="h2" className="text-2xl md:text-5xl font-bold mb-4 font-serif" style={{ color: C.white }} type="words" />
-          <p className="text-base max-w-lg mx-auto" style={{ color: C.muted, fontFamily: "'Inter', sans-serif" }}>
+          <p className="text-base max-w-xl mx-auto font-sans leading-relaxed" style={{ color: C.muted }}>
             {t.vacancies_subtitle}
           </p>
         </div>
@@ -231,11 +242,13 @@ export function Vacancies() {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 pr-2">
-                    <h3 className="font-bold mb-2" style={{ fontFamily: "'Playfair Display', serif", color: C.white, fontSize: "16px" }}>{title as string}</h3>
+                    <h3 className="font-bold text-lg mb-2 font-serif" style={{ color: C.white }}>
+                      {title as string}
+                    </h3>
                     <div className="flex flex-wrap gap-2">
                       {v.type && (
-                        <span className="text-[11px] px-2.5 py-0.5 rounded-full font-medium" style={{ background: "rgba(255,255,255,0.05)", color: C.muted, fontFamily: "'Inter', sans-serif" }}>
-                          {v.type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        <span className="text-[11px] px-2.5 py-0.5 rounded-full font-medium font-sans" style={{ background: "rgba(255,255,255,0.05)", color: C.muted }}>
+                          {typeLabel(v.type)}
                         </span>
                       )}
                     </div>
@@ -244,25 +257,25 @@ export function Vacancies() {
                 </div>
 
                 {desc && (
-                  <p className="text-sm mb-3 leading-relaxed line-clamp-2" style={{ color: C.muted, fontFamily: "'Inter', sans-serif" }}>
+                  <p className="text-sm mb-3 leading-relaxed line-clamp-2 font-sans" style={{ color: C.muted }}>
                     {desc}
                   </p>
                 )}
 
-                <p className="text-sm mb-2 leading-relaxed" style={{ color: C.muted, fontFamily: "'Inter', sans-serif" }}>
+                <p className="text-sm mb-2 leading-relaxed font-sans" style={{ color: C.muted }}>
                   <span style={{ color: C.secondary, fontWeight: 600 }}>{t.requirements_label || "Requirements"}:</span> {requirements}
                 </p>
 
-                <div className="flex items-center gap-5 text-xs mb-5" style={{ color: C.muted, fontFamily: "'Inter', sans-serif" }}>
+                <div className="flex items-center gap-5 text-xs mb-5 font-sans" style={{ color: C.muted }}>
                   {v.salary && <span style={{ color: C.gold }}>💰 {v.salary}</span>}
                 </div>
 
                 <button
                   onClick={(e) => { e.stopPropagation(); setSelectedVacancy(v); }}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold transition-all hover:-translate-y-0.5 active:translate-y-0.5"
-                  style={{ background: C.btnGrad, color: C.bg, fontFamily: "'Inter', sans-serif", boxShadow: C.btnShadow }}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold transition-all hover:-translate-y-0.5 active:translate-y-0.5 font-sans"
+                  style={{ background: C.btnGrad, color: C.white, boxShadow: C.btnShadow }}
                 >
-                  {t.view_details || "View Details"}
+                  {t.view_details || "Batafsil"}
                 </button>
               </div>
             );
