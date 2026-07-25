@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Clock, GraduationCap, ArrowRight } from "lucide-react";
+import { Clock, GraduationCap, ArrowRight, Info } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useApiData } from "@/hooks/useApiData";
 import { getImageUrl } from "@/lib/utils";
@@ -68,16 +68,17 @@ export function Courses({ onEnroll }: CoursesProps) {
           </div>
           <GoldText
             as="h2"
-            className="text-2xl md:text-4xl lg:text-5xl font-bold mb-4"
-            style={{ fontFamily: "'Playfair Display', serif" }}
+            className="font-bold mb-3"
+            style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.3rem, 3vw, 2.2rem)" }}
           >
             {t.courses_title}
           </GoldText>
           <p
-            className="text-lg max-w-2xl mx-auto"
+            className="max-w-2xl mx-auto"
             style={{
               color: C.muted,
               fontFamily: "'Inter', sans-serif",
+              fontSize: "clamp(0.75rem, 1.3vw, 0.9rem)",
             }}
           >
             {COURSE_SUBTITLES[lang]}
@@ -180,18 +181,32 @@ export function Courses({ onEnroll }: CoursesProps) {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => onEnroll(String(course.id))}
-                    className="w-full py-3 px-6 rounded-xl text-sm font-semibold transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-[0.98]"
-                    style={{
-                        background: C.btnGrad,
-                        color: C.bg,
-                        boxShadow: C.btnShadow,
-                      fontFamily: "'Inter', sans-serif",
-                    }}
-                  >
-                    {t.enroll}
-                  </button>
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/courses/${course.id}`}
+                      className="flex-1 py-3 px-3 rounded-xl text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-[0.98] flex items-center justify-center gap-1.5"
+                      style={{
+                        border: `1px solid rgba(212,175,55,0.3)`,
+                        color: C.gold,
+                        fontFamily: "'Inter', sans-serif",
+                      }}
+                    >
+                      <Info size={14} />
+                      {t.view_details || "Batafsil"}
+                    </Link>
+                    <button
+                      onClick={() => onEnroll(String(course.id))}
+                      className="flex-1 py-3 px-3 rounded-xl text-sm font-semibold transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-[0.98]"
+                      style={{
+                          background: C.btnGrad,
+                          color: C.bg,
+                          boxShadow: C.btnShadow,
+                        fontFamily: "'Inter', sans-serif",
+                      }}
+                    >
+                      {t.enroll}
+                    </button>
+                  </div>
                 </div>
               </div>
             );

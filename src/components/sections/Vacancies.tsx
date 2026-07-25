@@ -48,7 +48,10 @@ function VacancyDetailModal({
           className="relative w-full max-w-2xl rounded-3xl overflow-hidden animate-fade-in-up"
           style={{ background: C.card, border: "1px solid rgba(236,198,103,0.3)", maxHeight: "90vh", display: "flex", flexDirection: "column" }}
         >
-          <div className="sticky top-0 z-10 flex items-center justify-between p-6 pb-4" style={{ background: C.card }}>
+          <div className="sticky top-0 z-10 flex items-center gap-4 p-6 pb-4" style={{ background: C.card }}>
+            <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
+              <img src="/images/logo.png" alt="TLS" className="w-full h-full object-contain" />
+            </div>
             <h2 className="text-xl md:text-2xl font-bold pr-8 font-serif" style={{ color: C.white }}>
               {title}
             </h2>

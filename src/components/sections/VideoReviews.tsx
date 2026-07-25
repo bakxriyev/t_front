@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { motion, AnimatePresence, type PanInfo } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useAnimationFrame, type PanInfo } from "framer-motion";
 import { Play, X, ChevronLeft, ChevronRight, Volume2, VolumeX } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useApiData, useApiSingle } from "@/hooks/useApiData";
@@ -85,7 +85,6 @@ export function VideoReviews() {
   const [muted, setMuted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showControl, setShowControl] = useState(true);
-  const [isPaused, setIsPaused] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout>>();
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -102,6 +101,32 @@ export function VideoReviews() {
   }, [apiData, lang]);
 
   const selected = selectedIndex !== null ? items[selectedIndex] : null;
+
+  const singleSetWidth = (CARD_W + 12) * items.length;
+  const x = useMotionValue(0);
+
+  useEffect(() => {
+    if (singleSetWidth > 0) {
+      x.set(-singleSetWidth);
+    }
+  }, [singleSetWidth]);
+
+  const allItems = useMemo(() => {
+    if (items.length === 0) return [];
+    return [...items, ...items, ...items];
+  }, [items]);
+
+  useAnimationFrame((_, delta) => {
+    if (allItems.length === 0) return;
+    const speed = 35;
+    const current = x.get();
+    const singleSetWidth = (CARD_W + 12) * items.length;
+    let newX = current - speed * (delta / 1000);
+    if (newX <= -singleSetWidth * 2) {
+      newX += singleSetWidth;
+    }
+    x.set(newX);
+  });
 
   const showControlsTemporarily = useCallback(() => {
     setShowControl(true);
@@ -246,39 +271,24 @@ export function VideoReviews() {
             maskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
             WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)",
           }}
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
         >
-          <div
-            className="flex"
-            style={{
-              gap: 0,
-              width: "fit-content",
-              animation: `marquee ${Math.max(20, items.length * 8)}s linear infinite`,
-              animationPlayState: isPaused ? "paused" : "running",
-              transform: "translateZ(0)",
-            }}
+          <motion.div
+            className="flex gap-3 md:gap-4"
+            style={{ x }}
           >
-            <div className="flex gap-3 md:gap-4 shrink-0">
-              {items.map((item, i) => (
-                <MarqueeCard key={item.id} item={item} index={i} originalIndex={i} settings={settings} handleOpen={handleOpen} />
-              ))}
-            </div>
-            <div className="flex gap-3 md:gap-4 shrink-0">
-              {items.map((item, i) => (
-                <MarqueeCard key={`dup-${item.id}`} item={item} index={i + items.length} originalIndex={i} settings={settings} handleOpen={handleOpen} />
-              ))}
-            </div>
-          </div>
+            {allItems.map((item, i) => (
+              <MarqueeCard
+                key={`${item.id}-${i}`}
+                item={item}
+                index={i}
+                originalIndex={i % items.length}
+                settings={settings}
+                handleOpen={handleOpen}
+              />
+            ))}
+          </motion.div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes marquee {
-          0% { transform: translate3d(0,0,0); }
-          100% { transform: translate3d(-50%,0,0); }
-        }
-      `}</style>
 
       <AnimatePresence>
         {selected && (
@@ -366,7 +376,7 @@ export function VideoReviews() {
                   autoPlay
                   playsInline
                   onTimeUpdate={handleTimeUpdate}
-                  onEnded={() => setPlaying(false)}
+                  onEnded={handleNext}
                   onClick={handleVideoClick}
                 />
 

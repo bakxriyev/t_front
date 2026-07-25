@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { X, Scale, Send, Loader2, CheckCircle } from "lucide-react";
+import { X, Send, Loader2, CheckCircle } from "lucide-react";
 import { C } from "@/lib/constants";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useApiData } from "@/hooks/useApiData";
@@ -107,11 +107,8 @@ export function EnrollModal({ course: initialCourse, onClose }: EnrollModalProps
         </button>
 
         <div className="flex flex-col items-center text-center mb-8">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: C.burGrad }}
-          >
-            <Scale className="w-7 h-7" style={{ color: C.gold }} />
+          <div className="w-16 h-16 flex items-center justify-center mb-4">
+            <img src="/images/logo.png" alt="TLS" className="w-full h-full object-contain" />
           </div>
           <h2
             className="text-2xl md:text-3xl font-bold mb-1"

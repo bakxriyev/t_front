@@ -1,11 +1,12 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Play, Scale, Shield, Users, Globe, ArrowRight, Award, BookOpen, GraduationCap } from "lucide-react";
+import { Scale, Shield, Users, Globe, ArrowRight, Award, BookOpen, GraduationCap, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useApiData } from "@/hooks/useApiData";
+import { useApiData, useApiSingle } from "@/hooks/useApiData";
 import { getImageUrl } from "@/lib/utils";
 import { C } from "@/lib/constants";
 
@@ -55,6 +56,14 @@ interface StatItem {
   order: number;
 }
 
+interface HeroData {
+  id: number;
+  title_uz?: string;
+  title_ru?: string;
+  title_en?: string;
+  image?: string;
+}
+
 const ALL_VALUE_ICONS: Record<string, any> = {
   integrity: Scale, excellence: Shield, community: Users, innovation: Globe,
   leadership: Award, growth: GraduationCap, education: BookOpen,
@@ -84,12 +93,123 @@ function GoldText({ children, className = "" }: { children: React.ReactNode; cla
 
 const VALUE_ICONS: Record<string, any> = ALL_VALUE_ICONS;
 
+function AboutGallery({ images }: { images: { url: string; title: string }[] }) {
+  const [index, setIndex] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const thumbnailsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (thumbnailsRef.current) {
+      let scrollPosition = 0;
+      for (let i = 0; i < index; i++) {
+        scrollPosition += 35 + 2;
+      }
+      scrollPosition += 2;
+      const containerWidth = thumbnailsRef.current.offsetWidth;
+      const centerOffset = containerWidth / 2 - 120 / 2;
+      scrollPosition -= centerOffset;
+      thumbnailsRef.current.scrollTo({ left: scrollPosition, behavior: 'smooth' });
+    }
+  }, [index]);
+
+  return (
+    <div className="relative flex flex-col gap-3">
+      <div
+        className="relative rounded-3xl overflow-hidden"
+        style={{ border: `1px solid ${C.border}` }}
+      >
+        <div className="aspect-[4/5] relative bg-black/40" ref={containerRef}>
+          <Image
+            src={images[index]?.url || '/images/about-campus.jpg'}
+            alt={images[index]?.title || ''}
+            fill
+            className="object-cover select-none pointer-events-none"
+            draggable={false}
+            priority
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(to top, ${C.bg}99 0%, transparent 60%)`,
+            }}
+          />
+
+          {images.length > 1 && (
+            <>
+              {index > 0 && (
+                <button
+                  onClick={() => setIndex((i) => i - 1)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all hover:scale-110 z-10"
+                  style={{ background: "rgba(0,0,0,0.5)" }}
+                >
+                  <ChevronLeft className="w-4 h-4 text-white" />
+                </button>
+              )}
+              {index < images.length - 1 && (
+                <button
+                  onClick={() => setIndex((i) => i + 1)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all hover:scale-110 z-10"
+                  style={{ background: "rgba(0,0,0,0.5)" }}
+                >
+                  <ChevronRight className="w-4 h-4 text-white" />
+                </button>
+              )}
+              <div
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md z-10"
+                style={{ background: "rgba(0,0,0,0.6)", color: C.white }}
+              >
+                {index + 1} / {images.length}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {images.length > 1 && (
+        <div
+          ref={thumbnailsRef}
+          className="overflow-x-auto"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <style>{`.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
+          <div className="flex gap-0.5 h-20" style={{ width: 'fit-content' }}>
+            {images.map((img, i) => (
+              <motion.button
+                key={i}
+                onClick={() => setIndex(i)}
+                initial={false}
+                animate={i === index ? 'active' : 'inactive'}
+                variants={{
+                  active: { width: 120, marginLeft: 2, marginRight: 2 },
+                  inactive: { width: 35, marginLeft: 0, marginRight: 0 },
+                }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="relative shrink-0 h-full overflow-hidden rounded-lg"
+                style={i === index ? { border: `2px solid ${C.gold}`, boxShadow: `0 0 12px ${C.gold}40` } : { border: '2px solid transparent' }}
+              >
+                <img
+                  src={img.url}
+                  alt={img.title}
+                  className="w-full h-full object-cover pointer-events-none select-none"
+                  draggable={false}
+                />
+              </motion.button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function About() {
   const { lang, t } = useLanguage();
   const { data: aboutData, loading } = useApiData<AboutData>('/api/about');
   const { data: valuesData } = useApiData<AboutValue>('/api/about-values');
   const { data: timelineData } = useApiData<TimelineItemData>('/api/timeline');
   const { data: statsData } = useApiData<StatItem>('/api/statistics/public');
+  const { data: heroData } = useApiData<HeroData>('/api/hero');
   const about = !loading && aboutData.length > 0 ? aboutData[0] : null;
 
   const lng = lang.toLowerCase();
@@ -98,11 +218,29 @@ export function About() {
   const contentText = about ? (about as unknown as Record<string, string>)[`content_${lng}`] || about.content_en : null;
   const aboutImage = about ? getImageUrl(about.image) : '/images/about-campus.jpg';
 
+  const carouselImages = useRef(() => {
+    const imgs: { url: string; title: string }[] = [];
+    if (about?.image) {
+      imgs.push({ url: getImageUrl(about.image), title: "Tashkent Law School" });
+    }
+    if (Array.isArray(heroData)) {
+      heroData.slice(0, 4).forEach((h) => {
+        if (h.image) {
+          const title = (h as any)[`title_${lng}`] || (h as any).title_en || "";
+          imgs.push({ url: getImageUrl(h.image), title });
+        }
+      });
+    }
+    return imgs.length > 0 ? imgs : [{ url: '/images/about-campus.jpg', title: "Tashkent Law School" }];
+  });
+
   const values = Array.isArray(valuesData) ? valuesData : [];
   const timeline = Array.isArray(timelineData) ? timelineData : [];
 
   const getMultilang = (item: any, prefix: string) =>
     (item as unknown as Record<string, string>)[`${prefix}_${lng}`] || (item as unknown as Record<string, string>)[`${prefix}_en`] || "";
+
+  const images = carouselImages.current();
 
   return (
     <section
@@ -120,7 +258,6 @@ export function About() {
           transition={{ duration: 0.6 }}
           className="text-center mb-10 md:mb-20"
         >
-          {/* SectionLabel */}
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="w-8 h-px" style={{ background: C.gold }} />
             <span
@@ -146,7 +283,7 @@ export function About() {
 
         {/* Two-column content */}
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 mb-16 md:mb-32">
-          {/* LEFT — Image with play button + badge */}
+          {/* LEFT — Gallery Carousel */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -154,60 +291,9 @@ export function About() {
             transition={{ duration: 0.7, ease: "easeOut" }}
             className="relative"
           >
-            <div
-              className="relative rounded-3xl overflow-hidden"
-              style={{ border: `1px solid ${C.border}` }}
-            >
-              <div className="aspect-[4/5] relative">
-                <Image
-                  src={aboutImage}
-                  alt="Tashkent Law School Campus"
-                  fill
-                  className="object-cover"
-                  style={{ filter: "brightness(0.65)" }}
-                />
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background: `linear-gradient(to top, ${C.bg}99 0%, transparent 60%)`,
-                  }}
-                />
-              </div>
+            <AboutGallery images={images} />
 
-              {/* Play button overlay */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="relative flex items-center justify-center cursor-pointer"
-                >
-                  {/* Pulse rings */}
-                  <div
-                    className="absolute w-24 h-24 rounded-full animate-ping opacity-20"
-                    style={{ background: C.gold }}
-                  />
-                  <div
-                    className="absolute w-28 h-28 rounded-full opacity-10"
-                    style={{ border: `2px solid ${C.gold}` }}
-                  />
-                  {/* Play circle */}
-                  <div
-                    className="relative w-20 h-20 rounded-full flex items-center justify-center shadow-2xl"
-                    style={{
-                      background: C.goldGrad,
-                      boxShadow: `0 0 40px ${C.gold}40`,
-                    }}
-                  >
-                    <Play
-                      className="w-8 h-8 ml-1"
-                      style={{ color: C.bg, fill: C.bg }}
-                    />
-                  </div>
-                </motion.div>
-              </div>
-            </div>
-
-            {/* Floating badge - uses first stat from API or fallback */}
+            {/* Floating badge */}
             {(() => {
               const statsArr = Array.isArray(statsData) ? statsData : [];
               const firstStat = statsArr.length > 0 ? statsArr[0] : null;
@@ -222,7 +308,7 @@ export function About() {
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: 0.3 }}
-                  className="absolute -bottom-6 -right-6 px-6 py-4 rounded-2xl shadow-2xl"
+                  className="absolute -bottom-6 -right-6 px-6 py-4 rounded-2xl shadow-2xl z-10"
                   style={{
                     background: C.burGrad,
                     border: `1px solid ${C.burgundy}`,
@@ -278,7 +364,7 @@ export function About() {
               </p>
             </div>
 
-            {/* Value cards - all from API or fallback */}
+            {/* Value cards */}
             <div className="grid grid-cols-2 gap-4">
               {(values.length > 0 ? values : [
                 { id: 0, key: "integrity", title_uz: "Halollik", title_ru: "Честность", title_en: "Integrity", description_uz: "Yuridik ta'lim va amaliyotda eng yuqori axloqiy standartlarni qo'llab-quvvatlash.", description_ru: "", description_en: "", order: 0 } as AboutValue,
@@ -366,7 +452,6 @@ export function About() {
           </div>
 
           <div className="relative">
-            {/* Center gold line */}
             <div
               className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-px hidden lg:block"
               style={{ background: `linear-gradient(to bottom, transparent, ${C.gold}40, ${C.gold}40, transparent)` }}
@@ -388,7 +473,6 @@ export function About() {
                       isRight ? "lg:flex-row" : "lg:flex-row-reverse"
                     }`}
                   >
-                    {/* Center dot */}
                     <div className="absolute left-1/2 -translate-x-1/2 z-10 hidden lg:flex">
                       <div
                         className="w-4 h-4 rounded-full"
@@ -399,7 +483,6 @@ export function About() {
                       />
                     </div>
 
-                    {/* Card */}
                     <div
                       className={`w-full lg:w-[calc(50%-2rem)] ${
                         isRight ? "lg:pr-8 lg:text-right" : "lg:pl-8 lg:text-left"
@@ -438,14 +521,13 @@ export function About() {
                       </div>
                     </div>
 
-                    {/* Spacer for the other side */}
                     <div className="hidden lg:block lg:w-[calc(50%-2rem)]" />
                   </motion.div>
                 );
               })}
             </div>
 
-            {/* Mobile timeline — left-aligned with a left gold line */}
+            {/* Mobile timeline */}
             <div className="relative lg:hidden mt-2">
               <div
                 className="absolute left-4 top-0 bottom-0 w-px"
@@ -463,7 +545,6 @@ export function About() {
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                   className="relative pl-10 pb-8 last:pb-0"
                 >
-                  {/* Dot */}
                   <div
                     className="absolute left-[11px] top-1 w-2.5 h-2.5 rounded-full z-10"
                     style={{
