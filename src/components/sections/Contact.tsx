@@ -20,6 +20,8 @@ interface Settings {
   working_hours_ru: string;
   working_hours_en: string;
   logo?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export function Contact() {
@@ -225,7 +227,12 @@ export function Contact() {
 
         <div className="rounded-3xl overflow-hidden" style={{ height: "340px", border: `1px solid ${C.border}` }}>
           <iframe
-            src="https://www.openstreetmap.org/export/embed.html?bbox=69.2%2C41.28%2C69.35%2C41.35&layer=mapnik&marker=41.31%2C69.27"
+            src={(() => {
+              const lat = settings?.latitude ?? 41.3111;
+              const lng = settings?.longitude ?? 69.2797;
+              const d = 0.035;
+              return `https://www.openstreetmap.org/export/embed.html?bbox=${lng - d}%2C${lat - d}%2C${lng + d}%2C${lat + d}&layer=mapnik&marker=${lat}%2C${lng}`;
+            })()}
             className="w-full h-full"
             title="Tashkent Law School Location"
             style={{ filter: "grayscale(100%) invert(92%) contrast(75%) sepia(10%)", border: "none" }}

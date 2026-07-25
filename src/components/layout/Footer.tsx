@@ -29,7 +29,7 @@ const SOCIAL_ICONS: Record<string, LucideIcon> = {
 
 export function Footer() {
   const { lang } = useLanguage();
-  const { data: settings } = useApiSingle<{ logo?: string; phone?: string; email?: string; address?: string }>('/api/settings');
+  const { data: settings } = useApiSingle<{ logo?: string; phone?: string; email?: string; address_uz?: string; address_ru?: string; address_en?: string }>('/api/settings');
   const { data: socialLinks } = useApiData<{ id: number; platform: string; url: string }>('/api/social-links');
   const { data: courseOffers } = useApiData<{ id: number; title_uz: string; title_ru: string; title_en: string }>('/api/courses/offers');
 
@@ -243,7 +243,7 @@ export function Footer() {
               <li className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 shrink-0 mt-0.5" style={{ color: C.gold }} />
                 <span className="text-sm font-sans" style={{ color: C.muted }}>
-                  {settings?.address || 'Amir Temur Avenue 100, Tashkent, Uzbekistan'}
+                  {(settings as any)?.[`address_${suffix}`] || settings?.address_en || 'Amir Temur Avenue 100, Tashkent, Uzbekistan'}
                 </span>
               </li>
             </ul>
