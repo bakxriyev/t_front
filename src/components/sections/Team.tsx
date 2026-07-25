@@ -35,7 +35,7 @@ export function Team() {
             type="words"
           />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {(team ?? []).map((m) => {
             const fields = m as unknown as Record<string, string>;
             const firstName = fields[`first_name_${suffix}`] || fields.first_name_en;
@@ -45,45 +45,50 @@ export function Team() {
             return (
               <div
                 key={m.id}
-                className="p-3 md:p-5 rounded-xl md:rounded-2xl text-center group transition-all hover:-translate-y-1"
+                className="rounded-xl md:rounded-2xl overflow-hidden group transition-all hover:-translate-y-1"
                 style={{ background: C.card, border: `1px solid ${C.border}` }}
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(236,198,103,0.3)")}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.border)}
               >
-                <div
-                  className="w-[76px] h-[76px] rounded-2xl overflow-hidden mx-auto mb-4"
-                  style={{ border: "2px solid rgba(236,198,103,0.25)", background: "#111" }}
-                >
+                <div className="relative w-full aspect-[3/4] overflow-hidden" style={{ background: "#111" }}>
                   <img
                     src={getImageUrl(m.photo)}
                     alt={`${firstName} ${lastName}`}
                     loading="lazy"
                     decoding="async"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, transparent 60%, rgba(13,13,13,0.9) 100%)" }} />
                 </div>
-                <h3 className="font-bold mb-1" style={{ fontFamily: "'Playfair Display', serif", color: C.white, fontSize: "14px" }}>
-                  {firstName as string} {lastName as string}
-                </h3>
-                <div className="text-xs mb-2" style={{ color: C.gold, fontFamily: "'Inter', sans-serif" }}>
-                  {role as string}
-                </div>
-                <div
-                  className="text-[11px] px-2 py-0.5 rounded-full inline-block"
-                  style={{ background: "rgba(255,255,255,0.05)", color: C.muted, fontFamily: "'Inter', sans-serif" }}
-                >
-                  {bio as string}
-                </div>
-                <div className="flex justify-center gap-2 mt-4">
-                  {[Linkedin, Mail].map((Icon, i) => (
-                    <button
-                      key={i}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:scale-110"
-                      style={{ background: "rgba(255,255,255,0.06)", color: C.muted }}
+                <div className="p-4 md:p-5 text-center -mt-1 relative">
+                  <h3
+                    className="font-bold mb-0.5 leading-tight"
+                    style={{ fontFamily: "'Playfair Display', serif", color: C.white, fontSize: "15px" }}
+                  >
+                    {firstName as string} {lastName as string}
+                  </h3>
+                  <div className="text-xs font-medium mb-2" style={{ color: C.gold, fontFamily: "'Inter', sans-serif" }}>
+                    {role as string}
+                  </div>
+                  {bio && (
+                    <div
+                      className="text-[11px] leading-relaxed px-2 py-1 rounded-lg"
+                      style={{ background: "rgba(255,255,255,0.04)", color: C.muted, fontFamily: "'Inter', sans-serif" }}
                     >
-                      <Icon size={12} />
-                    </button>
-                  ))}
+                      {bio as string}
+                    </div>
+                  )}
+                  <div className="flex justify-center gap-2 mt-3">
+                    {[Linkedin, Mail].map((Icon, i) => (
+                      <button
+                        key={i}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:scale-110 hover:bg-white/10"
+                        style={{ background: "rgba(255,255,255,0.06)", color: C.muted }}
+                      >
+                        <Icon size={12} />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             );
