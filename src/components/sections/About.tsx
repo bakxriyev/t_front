@@ -22,6 +22,7 @@ interface AboutData {
   vision_ru: string;
   vision_en: string;
   image: string;
+  images?: string[];
 }
 
 interface AboutValue {
@@ -216,13 +217,16 @@ export function About() {
   const missionText = about ? (about as unknown as Record<string, string>)[`mission_${lng}`] || about.mission_en : t.about_mission_desc;
   const visionText = about ? (about as unknown as Record<string, string>)[`vision_${lng}`] || about.vision_en : t.about_vision_desc;
   const contentText = about ? (about as unknown as Record<string, string>)[`content_${lng}`] || about.content_en : null;
-  const aboutImage = about ? getImageUrl(about.image) : '/images/about-campus.jpg';
+  const aboutImagesList = about?.images && Array.isArray(about.images) && about.images.length > 0
+    ? about.images
+    : (about?.image ? [about.image] : []);
+  const aboutImage = aboutImagesList.length > 0 ? getImageUrl(aboutImagesList[0]) : '/images/about-campus.jpg';
 
   const carouselImages = useRef(() => {
     const imgs: { url: string; title: string }[] = [];
-    if (about?.image) {
-      imgs.push({ url: getImageUrl(about.image), title: "Tashkent Law School" });
-    }
+    aboutImagesList.forEach((img: string) => {
+      imgs.push({ url: getImageUrl(img), title: "Tashkent Law School" });
+    });
     if (Array.isArray(heroData)) {
       heroData.slice(0, 4).forEach((h) => {
         if (h.image) {
