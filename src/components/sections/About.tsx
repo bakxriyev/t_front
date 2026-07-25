@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Scale, Shield, Users, Globe, ArrowRight, Award, BookOpen, GraduationCap, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
@@ -23,7 +23,10 @@ interface AboutData {
   vision_en: string;
   image: string;
   images?: string[];
+  videos?: string[];
 }
+
+type CarouselItem = { url: string; title: string; type: 'image' | 'video' };
 
 interface AboutValue {
   id: number;
@@ -94,10 +97,10 @@ function GoldText({ children, className = "" }: { children: React.ReactNode; cla
 
 const VALUE_ICONS: Record<string, any> = ALL_VALUE_ICONS;
 
-function AboutGallery({ images }: { images: { url: string; title: string }[] }) {
+function AboutGallery({ items }: { items: CarouselItem[] }) {
   const [index, setIndex] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(true);
   const thumbnailsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -114,29 +117,70 @@ function AboutGallery({ images }: { images: { url: string; title: string }[] }) 
     }
   }, [index]);
 
+  useEffect(() => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.play().catch(() => {});
+      } else {
+        videoRef.current.pause();
+      }
+    }
+  }, [index, isPlaying]);
+
+  const item = items[index];
+
   return (
     <div className="relative flex flex-col gap-3">
       <div
         className="relative rounded-3xl overflow-hidden"
         style={{ border: `1px solid ${C.border}` }}
       >
-        <div className="aspect-[4/5] relative bg-black/40" ref={containerRef}>
-          <Image
-            src={images[index]?.url || '/images/about-campus.jpg'}
-            alt={images[index]?.title || ''}
-            fill
-            className="object-cover select-none pointer-events-none"
-            draggable={false}
-            priority
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `linear-gradient(to top, ${C.bg}99 0%, transparent 60%)`,
-            }}
-          />
+        <div className="aspect-[4/5] relative bg-black/40">
+          {item?.type === 'video' ? (
+            <>
+              <video
+                ref={videoRef}
+                src={item.url}
+                className="absolute inset-0 w-full h-full object-cover"
+                muted
+                loop
+                playsInline
+                onClick={() => setIsPlaying((p) => !p)}
+              />
+              <div className="absolute bottom-3 left-3 z-10">
+                <button
+                  onClick={() => setIsPlaying((p) => !p)}
+                  className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all hover:scale-110"
+                  style={{ background: "rgba(0,0,0,0.5)" }}
+                >
+                  {isPlaying ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+                  )}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Image
+                src={item?.url || '/images/about-campus.jpg'}
+                alt={item?.title || ''}
+                fill
+                className="object-cover select-none pointer-events-none"
+                draggable={false}
+                priority
+              />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: `linear-gradient(to top, ${C.bg}99 0%, transparent 60%)`,
+                }}
+              />
+            </>
+          )}
 
-          {images.length > 1 && (
+          {items.length > 1 && (
             <>
               {index > 0 && (
                 <button
@@ -147,7 +191,7 @@ function AboutGallery({ images }: { images: { url: string; title: string }[] }) 
                   <ChevronLeft className="w-4 h-4 text-white" />
                 </button>
               )}
-              {index < images.length - 1 && (
+              {index < items.length - 1 && (
                 <button
                   onClick={() => setIndex((i) => i + 1)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all hover:scale-110 z-10"
@@ -160,14 +204,14 @@ function AboutGallery({ images }: { images: { url: string; title: string }[] }) 
                 className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md z-10"
                 style={{ background: "rgba(0,0,0,0.6)", color: C.white }}
               >
-                {index + 1} / {images.length}
+                {index + 1} / {items.length}
               </div>
             </>
           )}
         </div>
       </div>
 
-      {images.length > 1 && (
+      {items.length > 1 && (
         <div
           ref={thumbnailsRef}
           className="overflow-x-auto"
@@ -175,10 +219,10 @@ function AboutGallery({ images }: { images: { url: string; title: string }[] }) 
         >
           <style>{`.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
           <div className="flex gap-0.5 h-20" style={{ width: 'fit-content' }}>
-            {images.map((img, i) => (
+            {items.map((it, i) => (
               <motion.button
                 key={i}
-                onClick={() => setIndex(i)}
+                onClick={() => { setIndex(i); setIsPlaying(true); }}
                 initial={false}
                 animate={i === index ? 'active' : 'inactive'}
                 variants={{
@@ -189,12 +233,21 @@ function AboutGallery({ images }: { images: { url: string; title: string }[] }) 
                 className="relative shrink-0 h-full overflow-hidden rounded-lg"
                 style={i === index ? { border: `2px solid ${C.gold}`, boxShadow: `0 0 12px ${C.gold}40` } : { border: '2px solid transparent' }}
               >
-                <img
-                  src={img.url}
-                  alt={img.title}
-                  className="w-full h-full object-cover pointer-events-none select-none"
-                  draggable={false}
-                />
+                {it.type === 'video' ? (
+                  <div className="w-full h-full relative">
+                    <video src={it.url} className="w-full h-full object-cover" muted />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    src={it.url}
+                    alt={it.title}
+                    className="w-full h-full object-cover pointer-events-none select-none"
+                    draggable={false}
+                  />
+                )}
               </motion.button>
             ))}
           </div>
@@ -206,45 +259,45 @@ function AboutGallery({ images }: { images: { url: string; title: string }[] }) 
 
 export function About() {
   const { lang, t } = useLanguage();
-  const { data: aboutData, loading } = useApiData<AboutData>('/api/about');
+  const { data: about, loading } = useApiSingle<AboutData>('/api/about');
   const { data: valuesData } = useApiData<AboutValue>('/api/about-values');
   const { data: timelineData } = useApiData<TimelineItemData>('/api/timeline');
   const { data: statsData } = useApiData<StatItem>('/api/statistics/public');
   const { data: heroData } = useApiData<HeroData>('/api/hero');
-  const about = !loading && aboutData.length > 0 ? aboutData[0] : null;
 
   const lng = lang.toLowerCase();
   const missionText = about ? (about as unknown as Record<string, string>)[`mission_${lng}`] || about.mission_en : t.about_mission_desc;
   const visionText = about ? (about as unknown as Record<string, string>)[`vision_${lng}`] || about.vision_en : t.about_vision_desc;
   const contentText = about ? (about as unknown as Record<string, string>)[`content_${lng}`] || about.content_en : null;
-  const aboutImagesList = about?.images && Array.isArray(about.images) && about.images.length > 0
-    ? about.images
-    : (about?.image ? [about.image] : []);
-  const aboutImage = aboutImagesList.length > 0 ? getImageUrl(aboutImagesList[0]) : '/images/about-campus.jpg';
 
-  const carouselImages = useRef(() => {
-    const imgs: { url: string; title: string }[] = [];
-    aboutImagesList.forEach((img: string) => {
-      imgs.push({ url: getImageUrl(img), title: "Tashkent Law School" });
+  const carouselItems = useMemo(() => {
+    const items: CarouselItem[] = [];
+    const aboutImages = about?.images && Array.isArray(about.images) && about.images.length > 0
+      ? about.images
+      : (about?.image ? [about.image] : []);
+    aboutImages.forEach((img: string) => {
+      items.push({ url: getImageUrl(img), title: "Tashkent Law School", type: 'image' });
+    });
+    const aboutVideos = about?.videos && Array.isArray(about.videos) ? about.videos : [];
+    aboutVideos.forEach((vid: string) => {
+      items.push({ url: getImageUrl(vid), title: "Video", type: 'video' });
     });
     if (Array.isArray(heroData)) {
       heroData.slice(0, 4).forEach((h) => {
         if (h.image) {
           const title = (h as any)[`title_${lng}`] || (h as any).title_en || "";
-          imgs.push({ url: getImageUrl(h.image), title });
+          items.push({ url: getImageUrl(h.image), title, type: 'image' });
         }
       });
     }
-    return imgs.length > 0 ? imgs : [{ url: '/images/about-campus.jpg', title: "Tashkent Law School" }];
-  });
+    return items.length > 0 ? items : [{ url: '/images/about-campus.jpg', title: "Tashkent Law School", type: 'image' as const }];
+  }, [about, heroData, lng]);
 
   const values = Array.isArray(valuesData) ? valuesData : [];
   const timeline = Array.isArray(timelineData) ? timelineData : [];
 
   const getMultilang = (item: any, prefix: string) =>
     (item as unknown as Record<string, string>)[`${prefix}_${lng}`] || (item as unknown as Record<string, string>)[`${prefix}_en`] || "";
-
-  const images = carouselImages.current();
 
   return (
     <section
@@ -295,7 +348,7 @@ export function About() {
             transition={{ duration: 0.7, ease: "easeOut" }}
             className="relative"
           >
-            <AboutGallery images={images} />
+            <AboutGallery items={carouselItems} />
 
             {/* Floating badge */}
             {(() => {
