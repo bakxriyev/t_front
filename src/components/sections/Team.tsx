@@ -5,7 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { AnimatedText } from "@/components/ui/AnimatedText";
 import { C } from "@/lib/constants";
-import { useApiData } from "@/hooks/useApiData";
+import { useApiData, useApiSingle } from "@/hooks/useApiData";
 import { getImageUrl } from "@/lib/utils";
 
 export function Team() {
@@ -20,6 +20,8 @@ export function Team() {
     photo: string;
     order: number;
   }>('/api/team?is_active=true');
+  const { data: settings } = useApiSingle<{ logo?: string }>('/api/settings');
+  const logoSrc = settings?.logo ? getImageUrl(settings.logo) : '/images/logo.png';
 
   return (
     <section id="team" className="relative overflow-hidden py-10 md:py-16 section-glass" style={{ background: "rgba(13,13,13,0.5)" }}>
@@ -50,17 +52,27 @@ export function Team() {
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(236,198,103,0.3)")}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.border)}
               >
-                <div className="relative w-full aspect-[3/4] overflow-hidden" style={{ background: "#111" }}>
+                <div className="relative w-full h-48 overflow-hidden" style={{ background: "#0d0d0d" }}>
+                  <div
+                    className="absolute inset-0 z-0 flex items-center justify-center"
+                    style={{ opacity: 0.08 }}
+                  >
+                    <img
+                      src={logoSrc}
+                      alt=""
+                      className="w-2/3 h-2/3 object-contain"
+                      aria-hidden="true"
+                    />
+                  </div>
                   <img
                     src={getImageUrl(m.photo)}
                     alt={`${firstName} ${lastName}`}
                     loading="lazy"
                     decoding="async"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="relative z-10 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, transparent 60%, rgba(13,13,13,0.9) 100%)" }} />
                 </div>
-                <div className="p-4 md:p-5 text-center -mt-1 relative">
+                <div className="p-4 md:p-5 text-center">
                   <h3
                     className="font-bold mb-0.5 leading-tight"
                     style={{ fontFamily: "'Playfair Display', serif", color: C.white, fontSize: "15px" }}
