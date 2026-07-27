@@ -65,12 +65,12 @@ export function Results() {
     <div
       className={`relative group cursor-pointer overflow-hidden rounded-xl shrink-0 ${className}`}
       onClick={() => setSelected(item)}
-      style={{ width: 200, height: 260 }}
+      style={{ width: 220 }}
     >
       <img
         src={getImageUrl(getPhoto(item))}
         alt={getName(item)}
-        className="w-full h-full object-contain bg-black/40 transition-all duration-500 group-hover:scale-105"
+        className="w-full aspect-[3/4] object-cover transition-all duration-500 group-hover:scale-105"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
@@ -83,6 +83,7 @@ export function Results() {
 
   const marqueeRows = [
     { direction: "left" as const, baseVelocity: 10 },
+    { direction: "right" as const, baseVelocity: 12 },
   ];
 
   return (
@@ -195,11 +196,11 @@ export function Results() {
               >
                 <X className="w-4 h-4" />
               </button>
-              <div className="bg-black">
+              <div className="bg-black flex items-center justify-center">
                 <img
                   src={getImageUrl(getPhoto(selected))}
                   alt={getName(selected)}
-                  className="w-full max-h-[65vh] object-contain mx-auto"
+                  className="max-w-full max-h-[70vh] object-contain mx-auto"
                 />
               </div>
               <div className="p-5 md:p-7" style={{ background: C.card }}>
