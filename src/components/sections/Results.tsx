@@ -24,6 +24,7 @@ interface ResultData {
   description_en?: string;
   year: string;
   photo?: string;
+  photos?: string[];
 }
 
 export function Results() {
@@ -36,10 +37,11 @@ export function Results() {
     item[`student_name_${l}`] || item.student_name_en;
   const getAchievement = (item: ResultData) =>
     item[`achievement_${l}`] || item.achievement_en;
+  const getPhoto = (item: ResultData) => item.photos?.[0] || item.photo;
   const getDescription = (item: ResultData) =>
     item[`description_${l}`] || item.description_en || "";
 
-  const photos = results.filter((r) => r.photo);
+  const photos = results.filter((r) => r.photos?.length || r.photo);
 
   if (loading) {
     return (
@@ -63,17 +65,17 @@ export function Results() {
     <div
       className={`relative group cursor-pointer overflow-hidden rounded-xl shrink-0 ${className}`}
       onClick={() => setSelected(item)}
-      style={{ width: 90, height: 110 }}
+      style={{ width: 240, height: 300 }}
     >
       <img
-        src={getImageUrl(item.photo)}
+        src={getImageUrl(getPhoto(item))}
         alt={getName(item)}
         className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <div className="absolute bottom-0 left-0 right-0 p-1.5 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-          <p className="text-white text-[10px] font-bold font-serif leading-tight">{getName(item)}</p>
-          <p className="text-[9px] mt-0.5 leading-tight" style={{ color: C.gold }}>{getAchievement(item)}</p>
+          <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+          <p className="text-white text-sm font-bold font-serif leading-tight">{getName(item)}</p>
+          <p className="text-xs mt-1 leading-tight" style={{ color: C.gold }}>{getAchievement(item)}</p>
         </div>
       </div>
     </div>
@@ -82,7 +84,6 @@ export function Results() {
   const marqueeRows = [
     { direction: "left" as const, baseVelocity: 12 },
     { direction: "right" as const, baseVelocity: 15 },
-    { direction: "left" as const, baseVelocity: 10 },
   ];
 
   return (
@@ -159,7 +160,7 @@ export function Results() {
                 grabCursor
                 className="py-1"
               >
-                <div className="flex gap-2 md:gap-3 px-2">
+                  <div className="flex gap-4 md:gap-5 px-2">
                   {photos.map((item) => (
                     <ImageCard key={item.id} item={item} />
                   ))}
@@ -199,7 +200,7 @@ export function Results() {
               </button>
               <div className="bg-black">
                 <img
-                  src={getImageUrl(selected.photo)}
+                  src={getImageUrl(getPhoto(selected))}
                   alt={getName(selected)}
                   className="w-full max-h-[65vh] object-contain mx-auto"
                 />
