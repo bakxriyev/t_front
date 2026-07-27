@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { motion, AnimatePresence, useMotionValue, useAnimationFrame } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useAnimationFrame, type PanInfo } from "framer-motion";
 import { Play, X, ChevronLeft, ChevronRight, Volume2, VolumeX } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useApiData, useApiSingle } from "@/hooks/useApiData";
