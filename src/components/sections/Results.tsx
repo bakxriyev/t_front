@@ -65,12 +65,12 @@ export function Results() {
     <div
       className={`relative group cursor-pointer overflow-hidden rounded-xl shrink-0 ${className}`}
       onClick={() => setSelected(item)}
-      style={{ width: 220 }}
+      style={{ width: 180 }}
     >
       <img
         src={getImageUrl(getPhoto(item))}
         alt={getName(item)}
-        className="w-full aspect-[3/4] object-cover transition-all duration-500 group-hover:scale-105"
+        className="w-full aspect-[9/16] object-cover transition-all duration-500 group-hover:scale-105"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
@@ -156,6 +156,8 @@ export function Results() {
                 baseVelocity={row.baseVelocity}
                 repeat={10}
                 slowdownOnHover
+                draggable
+                grabCursor
                 className="py-1"
               >
                   <div className="flex gap-4 md:gap-5 px-2">

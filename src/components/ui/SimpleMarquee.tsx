@@ -78,6 +78,8 @@ const SimpleMarquee = ({
 
   const isDragging = useRef(false)
   const dragVelocity = useRef(0)
+  const dragMoved = useRef(false)
+  const dragStartPos = useRef({ x: 0, y: 0 })
 
   const smoothHoverFactor = useSpring(hoverFactorValue, slowDownSpringConfig)
 
@@ -171,20 +173,29 @@ const SimpleMarquee = ({
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!draggable) return
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
 
-    if (grabCursor) {
-      ;(e.currentTarget as HTMLElement).style.cursor = "grabbing"
-    }
-
+    dragStartPos.current = { x: e.clientX, y: e.clientY }
+    dragMoved.current = false
     isDragging.current = true
     lastPointerPosition.current = { x: e.clientX, y: e.clientY }
-
     dragVelocity.current = 0
   }
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!draggable || !isDragging.current) return
+
+    const dx = Math.abs(e.clientX - dragStartPos.current.x)
+    const dy = Math.abs(e.clientY - dragStartPos.current.y)
+
+    if (!dragMoved.current && (dx > 3 || dy > 3)) {
+      dragMoved.current = true
+      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+      if (grabCursor) {
+        ;(e.currentTarget as HTMLElement).style.cursor = "grabbing"
+      }
+    }
+
+    if (!dragMoved.current) return
 
     const currentPosition = { x: e.clientX, y: e.clientY }
 
@@ -205,9 +216,14 @@ const SimpleMarquee = ({
 
   const handlePointerUp = (e: React.PointerEvent) => {
     if (!draggable) return
-    ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
-
+    if (dragMoved.current) {
+      ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+      if (grabCursor) {
+        ;(e.currentTarget as HTMLElement).style.cursor = "grab"
+      }
+    }
     isDragging.current = false
+    dragMoved.current = false
   }
 
   return (

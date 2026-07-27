@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { motion, AnimatePresence, useMotionValue, useAnimationFrame, type PanInfo } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useAnimationFrame } from "framer-motion";
 import { Play, X, ChevronLeft, ChevronRight, Volume2, VolumeX } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useApiData, useApiSingle } from "@/hooks/useApiData";
@@ -104,6 +104,7 @@ export function VideoReviews() {
 
   const singleSetWidth = (CARD_W + 12) * items.length;
   const x = useMotionValue(0);
+  const isDragging = useRef(false);
 
   useEffect(() => {
     if (singleSetWidth > 0) {
@@ -117,7 +118,7 @@ export function VideoReviews() {
   }, [items]);
 
   useAnimationFrame((_, delta) => {
-    if (allItems.length === 0) return;
+    if (allItems.length === 0 || isDragging.current) return;
     const speed = 35;
     const current = x.get();
     const singleSetWidth = (CARD_W + 12) * items.length;
@@ -273,8 +274,13 @@ export function VideoReviews() {
           }}
         >
           <motion.div
-            className="flex gap-3 md:gap-4"
+            className="flex gap-3 md:gap-4 cursor-grab active:cursor-grabbing"
             style={{ x }}
+            drag="x"
+            dragConstraints={{ left: -(CARD_W + 12) * items.length * 2, right: 0 }}
+            dragElastic={0.05}
+            onDragStart={() => { isDragging.current = true; }}
+            onDragEnd={() => { isDragging.current = false; }}
           >
             {allItems.map((item, i) => (
               <MarqueeCard
