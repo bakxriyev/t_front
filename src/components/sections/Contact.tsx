@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MapPin, Phone, Mail, Clock, Send, MessageCircle, Instagram, Facebook, Youtube, Linkedin, CheckCircle, Loader2 } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Send, MessageCircle, Instagram, Facebook, Youtube, Linkedin, CheckCircle, Loader2, Globe } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useApiSingle } from "@/hooks/useApiData";
+import { useApiSingle, useApiData } from "@/hooks/useApiData";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { C } from "@/lib/constants";
 import { AnimatedText } from "@/components/ui/AnimatedText";
 import { sendToTelegram, formatDate } from "@/lib/telegram";
+import type { LucideIcon } from "lucide-react";
 
 interface Settings {
   id: number;
@@ -24,9 +25,35 @@ interface Settings {
   longitude?: number | null;
 }
 
+const SOCIAL_ICONS: Record<string, LucideIcon> = {
+  telegram: MessageCircle,
+  instagram: Instagram,
+  facebook: Facebook,
+  youtube: Youtube,
+  linkedin: Linkedin,
+  tiktok: Youtube,
+  whatsapp: Phone,
+  twitter: MessageCircle,
+  github: Globe,
+  website: Globe,
+};
+
+const SOCIAL_COLORS: Record<string, string> = {
+  telegram: "#229ED9",
+  instagram: "#E1306C",
+  facebook: "#1877F2",
+  youtube: "#FF0000",
+  linkedin: "#0077B5",
+  tiktok: "#000000",
+  whatsapp: "#25D366",
+  twitter: "#1DA1F2",
+  github: "#333333",
+};
+
 export function Contact() {
   const { lang, t } = useLanguage();
   const { data: settings } = useApiSingle<Settings>("/api/settings");
+  const { data: socialLinks } = useApiData<{ id: number; platform: string; url: string }>("/api/social-links");
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -61,13 +88,6 @@ export function Contact() {
     setSending(false);
   };
 
-  const socials = [
-    { icon: <MessageCircle size={15} />, label: "Telegram", color: "#229ED9", href: "https://t.me/tashkentlawschool" },
-    { icon: <Instagram size={15} />, label: "Instagram", color: "#E1306C", href: "#" },
-    { icon: <Facebook size={15} />, label: "Facebook", color: "#1877F2", href: "#" },
-    { icon: <Youtube size={15} />, label: "YouTube", color: "#FF0000", href: "#" },
-    { icon: <Linkedin size={15} />, label: "LinkedIn", color: "#0077B5", href: "#" },
-  ];
 
   return (
     <section id="contact" className="relative overflow-hidden py-10 md:py-16 section-glass" style={{ background: "rgba(13,13,13,0.5)" }}>
@@ -111,23 +131,28 @@ export function Contact() {
               ))}
             </div>
             <div className="flex flex-wrap gap-2">
-              {socials.map((s, i) => (
+              {(socialLinks ?? []).map((s) => {
+                const key = s.platform?.toLowerCase();
+                const Icon = SOCIAL_ICONS[key] || Globe;
+                const color = SOCIAL_COLORS[key] || C.gold;
+                return (
                 <a
-                  key={i}
-                  href={s.href}
+                  key={s.id}
+                  href={s.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:-translate-y-0.5 active:translate-y-0.5"
                   style={{
-                    background: `${s.color}18`,
-                    color: s.color,
-                    border: `1px solid ${s.color}28`,
+                    background: `${color}18`,
+                    color: color,
+                    border: `1px solid ${color}28`,
                     fontFamily: "'Inter', sans-serif",
                   }}
                 >
-                  {s.icon} {s.label}
+                  <Icon size={15} /> {s.platform}
                 </a>
-              ))}
+                );
+              })}
             </div>
           </div>
 

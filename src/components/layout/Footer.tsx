@@ -25,6 +25,11 @@ const SOCIAL_ICONS: Record<string, LucideIcon> = {
   facebook: Facebook,
   youtube: Youtube,
   linkedin: Linkedin,
+  tiktok: Youtube,
+  twitter: Send,
+  whatsapp: Phone,
+  github: Send,
+  website: Send,
 };
 
 export function Footer() {
