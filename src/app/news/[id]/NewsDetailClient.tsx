@@ -114,12 +114,11 @@ export default function NewsDetailClient() {
             </div>
 
             {data.image && (
-              <div className="rounded-2xl overflow-hidden mb-8">
+              <div className="rounded-2xl overflow-hidden mb-8 bg-black/30 flex items-center justify-center">
                 <img
                   src={getImageUrl(data.image)}
                   alt={title}
-                  className="w-full h-auto max-h-[500px] object-cover"
-                  style={{ filter: "brightness(0.7)" }}
+                  className="w-full max-h-[600px] object-contain"
                 />
               </div>
             )}

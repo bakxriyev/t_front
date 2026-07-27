@@ -42,14 +42,13 @@ function NewsCard({
         border: `1px solid ${C.border}`,
       }}
     >
-      <div className="overflow-hidden relative" style={{ height: 200 }}>
+      <div className="overflow-hidden relative aspect-[16/9] bg-black/40">
         <img
           src={img}
           alt={title}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-          style={{ filter: "brightness(0.65)" }}
+          className="w-full h-full object-contain transition-transform duration-500 hover:scale-105"
         />
       </div>
 
