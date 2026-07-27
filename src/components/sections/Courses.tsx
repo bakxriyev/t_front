@@ -37,6 +37,7 @@ const LEVEL_LABELS: Record<string, Record<string, string>> = {
 
 interface CoursesProps {
   onEnroll: (course: string) => void;
+  limit?: number;
 }
 
 interface CourseData {
@@ -54,9 +55,10 @@ interface CourseData {
   order: number;
 }
 
-export function Courses({ onEnroll }: CoursesProps) {
+export function Courses({ onEnroll, limit }: CoursesProps) {
   const { lang, t } = useLanguage();
   const { data: courses, loading } = useApiData<CourseData>("/api/courses/offers?is_active=true");
+  const displayed = limit ? courses.slice(0, limit) : courses;
 
   return (
     <section id="courses" style={{ background: "rgba(13,13,13,0.5)" }} className="relative overflow-hidden py-10 md:py-16 section-glass">
@@ -86,7 +88,7 @@ export function Courses({ onEnroll }: CoursesProps) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-8">
-          {courses.map((course) => {
+          {displayed.map((course) => {
             const title = course[`title_${lang.toLowerCase() as 'uz' | 'ru' | 'en'}`] || course.title_en;
             const description = course[`description_${lang.toLowerCase() as 'uz' | 'ru' | 'en'}`] || course.description_en;
             return (
@@ -213,6 +215,7 @@ export function Courses({ onEnroll }: CoursesProps) {
           })}
           </div>
 
+          {limit && courses.length > limit && (
           <div className="text-center mt-10">
             <Link
               href="/courses"
@@ -224,10 +227,11 @@ export function Courses({ onEnroll }: CoursesProps) {
                 boxShadow: C.btnShadow,
               }}
             >
-              Barcha kurslar
+              {lang === "UZ" ? "Barcha kurslar" : lang === "RU" ? "Все курсы" : "View All Courses"}
               <ArrowRight size={16} />
             </Link>
           </div>
+          )}
         </div>
     </section>
   );

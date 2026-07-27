@@ -40,7 +40,7 @@ export default function Home() {
       <Hero onApply={() => { setShowEnroll(true); setEnrollCourse(null); }} />
       <Stats />
       <About />
-      <Courses onEnroll={(c) => { setShowEnroll(true); setEnrollCourse(c); }} />
+      <Courses onEnroll={(c) => { setShowEnroll(true); setEnrollCourse(c); }} limit={6} />
       <Teachers />
       <Results />
       <Testimonials />
