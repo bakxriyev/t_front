@@ -18,7 +18,7 @@ export function truncate(str: string | null | undefined, length: number = 100) {
 export function getImageUrl(path?: string | null) {
   if (!path) return '/images/placeholder.svg';
   if (path.startsWith('http')) return path;
-  return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3030'}${path}`;
+  return `${process.env.NEXT_PUBLIC_API_URL || 'https://b.tashkentlawschool.uz'}${path}`;
 }
 
 export function generateId() {

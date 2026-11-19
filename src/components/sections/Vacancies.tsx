@@ -1,294 +1,109 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowRight, Banknote, Briefcase, CheckCircle2, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { SectionLabel } from "@/components/ui/SectionLabel";
-import { AnimatedText } from "@/components/ui/AnimatedText";
-import { C } from "@/lib/constants";
-import { useApiData } from "@/hooks/useApiData";
-import { X, Send, Loader2, CheckCircle, Briefcase, MapPin, DollarSign, Clock, ChevronRight, AlertCircle } from "lucide-react";
-import { sendToTelegram, formatDate } from "@/lib/telegram";
+import { API, isActive, pick, useList, type Vacancy } from "@/lib/content";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { Stagger, StaggerItem } from "@/components/ui/Reveal";
+import { Modal } from "@/components/ui/Modal";
+import { sendLead } from "@/lib/telegram";
 
-interface VacancyData {
-  id: number;
-  title_uz: string; title_ru: string; title_en: string;
-  description_uz: string; description_ru: string; description_en: string;
-  requirements_uz: string; requirements_ru: string; requirements_en: string;
-  salary: string;
-  type: string;
-  is_active: boolean;
-}
-
-function typeLabel(t: string): string {
-  return t.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-}
-
-function VacancyDetailModal({
-  v,
-  lang,
-  t,
-  onClose,
-}: {
-  v: VacancyData;
-  lang: string;
-  t: Record<string, string>;
-  onClose: () => void;
-}) {
-  const suffix = lang.toLowerCase();
-  const fields = v as unknown as Record<string, string>;
-  const title = fields[`title_${suffix}`] || fields.title_en;
-  const desc = fields[`description_${suffix}`] || fields.description_en || "";
-  const reqs = fields[`requirements_${suffix}`] || fields.requirements_en || "";
-
-  return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative min-h-screen flex items-center justify-center p-4">
-        <div
-          className="relative w-full max-w-2xl rounded-3xl overflow-hidden animate-fade-in-up"
-          style={{ background: C.card, border: "1px solid rgba(236,198,103,0.3)", maxHeight: "90vh", display: "flex", flexDirection: "column" }}
-        >
-          <div className="sticky top-0 z-10 flex items-center gap-4 p-6 pb-4" style={{ background: C.card }}>
-            <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
-              <img src="/images/logo.png" alt="TLS" className="w-full h-full object-contain" />
-            </div>
-            <h2 className="text-xl md:text-2xl font-bold pr-8 font-serif" style={{ color: C.white }}>
-              {title}
-            </h2>
-            <button onClick={onClose} className="absolute top-5 right-5 p-2 rounded-full transition-colors duration-200 hover:opacity-70" style={{ color: C.muted }} aria-label="Close">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="overflow-y-auto px-6 pb-6 space-y-5" style={{ flex: 1 }}>
-            <div className="flex flex-wrap gap-3">
-              {v.type && (
-                <span className="text-[11px] px-3 py-1 rounded-full font-medium font-sans" style={{ background: "rgba(255,255,255,0.06)", color: C.gold }}>
-                  {typeLabel(v.type)}
-                </span>
-              )}
-              {v.salary && (
-                <span className="text-[11px] px-3 py-1 rounded-full font-medium flex items-center gap-1.5 font-sans" style={{ background: "rgba(255,255,255,0.06)", color: C.secondary }}>
-                  <DollarSign size={12} style={{ color: C.gold }} />{v.salary}
-                </span>
-              )}
-            </div>
-
-            {desc && (
-              <div>
-                <h4 className="text-sm font-semibold mb-2 font-sans" style={{ color: C.white }}>
-                  {lang === "UZ" ? "Tavsif" : lang === "RU" ? "Описание" : "Description"}
-                </h4>
-                <p className="text-sm leading-relaxed font-sans" style={{ color: C.muted }}>{desc}</p>
-              </div>
-            )}
-
-            {reqs && (
-              <div>
-                <h4 className="text-sm font-semibold mb-2 font-sans" style={{ color: C.white }}>
-                  {t.requirements_label || "Requirements"}
-                </h4>
-                <p className="text-sm leading-relaxed font-sans" style={{ color: C.muted }}>{reqs}</p>
-              </div>
-            )}
-
-            <div className="pt-4 border-t" style={{ borderColor: C.border }}>
-              <ApplyForm vacancyTitle={title} t={t} onClose={onClose} />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ApplyForm({
-  vacancyTitle,
-  t,
-  onClose,
-}: {
-  vacancyTitle: string;
-  t: Record<string, string>;
-  onClose: () => void;
-}) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [experience, setExperience] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!firstName.trim() || !lastName.trim() || !phone.trim()) return;
-
-    setSending(true);
-    setError("");
-    const dateStr = formatDate();
-    const text = `<b>💼 Yangi ariza — Vakansiyaga murojaat</b>\n━━━━━━━━━━━━━━━━━━━\n\n👤 <b>Ism:</b>  ${firstName.trim()}\n👤 <b>Familiya:</b>  ${lastName.trim()}\n📞 <b>Telefon:</b>  ${phone.trim()}\n💼 <b>Vakansiya:</b>  ${vacancyTitle}\n📋 <b>Tajriba:</b>  ${experience.trim() || "—"}\n\n━━━━━━━━━━━━━━━━━━━\n📅 ${dateStr}`;
-    const result = await sendToTelegram(text, true);
-
-    if (result.success) {
-      setSent(true);
-      setTimeout(() => {
-        setSent(false);
-        onClose();
-      }, 1500);
-    } else {
-      setError(result.error || "Yuborishda xatolik");
-    }
-    setSending(false);
-  };
-
-  const inputClass = "w-full px-4 py-2.5 rounded-xl text-sm outline-none transition-all duration-300 font-sans";
-  const inputStyle = { background: "#141414", border: `1px solid ${C.border}`, color: C.white };
-  const focusStyle = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    e.currentTarget.style.borderColor = C.gold;
-    e.currentTarget.style.boxShadow = `0 0 0 3px rgba(212,175,55,0.1)`;
-  };
-  const blurStyle = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    e.currentTarget.style.borderColor = C.border;
-    e.currentTarget.style.boxShadow = "none";
-  };
-
-  return (
-    <div>
-      <h4 className="text-base font-semibold mb-4 text-center font-serif" style={{ color: C.white }}>
-        {t.apply_position || "Apply for Position"}
-      </h4>
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium mb-1 font-sans" style={{ color: C.secondary }}>{t.firstname || "First Name"}</label>
-            <input type="text" required value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="John"
-              className={inputClass} style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1 font-sans" style={{ color: C.secondary }}>{t.lastname || "Last Name"}</label>
-            <input type="text" required value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe"
-              className={inputClass} style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium mb-1 font-sans" style={{ color: C.secondary }}>{t.phone || "Phone Number"}</label>
-          <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+998 XX XXX XX XX"
-            className={inputClass} style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium mb-1 font-sans" style={{ color: C.secondary }}>{t.experience_label || "Experience / About You"}</label>
-          <textarea value={experience} onChange={(e) => setExperience(e.target.value)}
-            placeholder={t.experience_placeholder || "Tell us about your experience..."}
-            rows={3} className={`${inputClass} resize-none`} style={inputStyle}
-            onFocus={focusStyle} onBlur={blurStyle} />
-        </div>
-
-        {error && (
-          <div className="flex items-center gap-2 text-xs p-3 rounded-xl" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#EF4444" }}>
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            {error}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={sending || sent}
-          className="w-full py-3 rounded-xl flex items-center justify-center gap-2 font-semibold text-sm transition-all duration-300 hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-[0.98] disabled:opacity-60 disabled:hover:translate-y-0 font-sans"
-          style={{ background: sent ? "#22c55e" : C.btnGrad, color: C.white, boxShadow: C.btnShadow }}
-        >
-          {sent ? (
-            <><CheckCircle className="w-4 h-4" />{t.application_sent || "Ariza qabul qilindi!"}</>
-          ) : sending ? (
-            <><Loader2 className="w-4 h-4 animate-spin" />{t.sending_text || "Yuborilmoqda..."}</>
-          ) : (
-            <><Send className="w-4 h-4" />{t.submit_enroll || "Arizani yuborish"}</>
-          )}
-        </button>
-      </form>
-    </div>
-  );
+function typeLabel(type: string, t: ReturnType<typeof useLanguage>["t"]) {
+  const k = type?.toLowerCase();
+  if (k === "full_time") return t.vac_full_time;
+  if (k === "part_time") return t.vac_part_time;
+  if (k === "remote") return t.vac_remote;
+  if (k === "contract") return t.vac_contract;
+  return type;
 }
 
 export function Vacancies() {
   const { lang, t } = useLanguage();
-  const suffix = lang.toLowerCase();
-  const { data: vacancies } = useApiData<VacancyData>('/api/vacancies?is_active=true');
-  const [selectedVacancy, setSelectedVacancy] = useState<VacancyData | null>(null);
+  const { data } = useList<Vacancy>(API.vacancies);
+  const list = data.filter(isActive);
+  const [sel, setSel] = useState<Vacancy | null>(null);
+  const [form, setForm] = useState({ name: "", phone: "", exp: "" });
+  const [status, setStatus] = useState<"idle" | "sending" | "ok" | "error">("idle");
+
+  if (!list.length) return null;
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sel || form.name.trim().length < 2 || form.phone.replace(/\D/g, "").length < 9) return;
+    setStatus("sending");
+    const r = await sendLead({
+      kind: "vacancy",
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      position: pick(sel, "title", "UZ"),
+      experience: form.exp.trim(),
+      source: "vacancy",
+      lang,
+    });
+    setStatus(r.success ? "ok" : "error");
+    if (r.success) window.setTimeout(() => { setSel(null); setStatus("idle"); setForm({ name: "", phone: "", exp: "" }); }, 2000);
+  };
 
   return (
-    <section id="vacancies" className="relative overflow-hidden py-10 md:py-16 section-glass" style={{ background: "rgba(13,13,13,0.5)" }}>
-      <div className="absolute inset-0 pointer-events-none" style={{ background: C.sectionGlow }} />
-      <div className="max-w-[1400px] mx-auto px-4 md:px-6 relative z-10">
-        <div className="text-center mb-10 md:mb-16">
-          <SectionLabel>{t.vacancies_label}</SectionLabel>
-          <AnimatedText text={t.vacancies_title} as="h2" className="text-2xl md:text-5xl font-bold mb-4 font-serif" style={{ color: C.white }} type="words" />
-          <p className="text-base max-w-xl mx-auto font-sans leading-relaxed" style={{ color: C.muted }}>
-            {t.vacancies_subtitle}
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
-          {(vacancies ?? []).map((v) => {
-            const fields = v as unknown as Record<string, string>;
-            const title = fields[`title_${suffix}`] || fields.title_en;
-            const requirements = fields[`requirements_${suffix}`] || fields.requirements_en;
-            const desc = fields[`description_${suffix}`] || fields.description_en || "";
-            return (
-              <div
-                key={v.id}
-                className="p-4 md:p-6 rounded-xl md:rounded-2xl transition-all hover:-translate-y-1 cursor-pointer group"
-                style={{ background: C.card, border: `1px solid ${C.border}` }}
-                onClick={() => setSelectedVacancy(v)}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(236,198,103,0.3)")}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.border)}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 pr-2">
-                    <h3 className="font-bold text-lg mb-2 font-serif" style={{ color: C.white }}>
-                      {title as string}
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {v.type && (
-                        <span className="text-[11px] px-2.5 py-0.5 rounded-full font-medium font-sans" style={{ background: "rgba(255,255,255,0.05)", color: C.muted }}>
-                          {typeLabel(v.type)}
-                        </span>
-                      )}
+    <section id="vacancies" className="section">
+      <div className="shell">
+        <SectionHeading eyebrow={t.vac_eyebrow} title={t.vac_title} sub={t.vac_sub} />
+        <Stagger className="grid gap-4 md:grid-cols-2">
+          {list.map((v) => (
+            <StaggerItem key={v.id}>
+              <div className="card card-hover spot flex h-full flex-col p-5 sm:p-6">
+                <div className="relative z-[2] flex items-start gap-4">
+                  <span className="icon-tile h-12 w-12"><Briefcase className="relative h-5 w-5" /></span>
+                  <div>
+                    <h3 className="font-display text-2xl font-semibold text-white">{pick(v, "title", lang)}</h3>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold">
+                      {v.type && <span className="rounded-full bg-wine-500/20 px-3 py-1 text-wine-400">{typeLabel(v.type, t)}</span>}
+                      {v.salary && <span className="inline-flex items-center gap-1 rounded-full bg-gold-400/15 px-3 py-1 text-gold-300"><Banknote className="h-3.5 w-3.5" />{v.salary}</span>}
                     </div>
                   </div>
-                  <ChevronRight size={18} className="flex-shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: C.gold }} />
                 </div>
-
-                {desc && (
-                  <p className="text-sm mb-3 leading-relaxed line-clamp-2 font-sans" style={{ color: C.muted }}>
-                    {desc}
-                  </p>
+                {pick(v, "description", lang) && <p className="relative z-[2] mt-5 whitespace-pre-line text-[15px] leading-relaxed text-ink-soft">{pick(v, "description", lang)}</p>}
+                {pick(v, "requirements", lang) && (
+                  <div className="relative z-[2] mt-4 rounded-2xl bg-white/[.05] p-4 text-sm">
+                    <p className="font-bold text-white">{t.vac_requirements}</p>
+                    <p className="mt-1 whitespace-pre-line text-ink-soft">{pick(v, "requirements", lang)}</p>
+                  </div>
                 )}
-
-                <p className="text-sm mb-2 leading-relaxed font-sans" style={{ color: C.muted }}>
-                  <span style={{ color: C.secondary, fontWeight: 600 }}>{t.requirements_label || "Requirements"}:</span> {requirements}
-                </p>
-
-                <div className="flex items-center gap-5 text-xs mb-5 font-sans" style={{ color: C.muted }}>
-                  {v.salary && <span style={{ color: C.gold }}>💰 {v.salary}</span>}
-                </div>
-
-                <button
-                  onClick={(e) => { e.stopPropagation(); setSelectedVacancy(v); }}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold transition-all hover:-translate-y-0.5 active:translate-y-0.5 font-sans"
-                  style={{ background: C.btnGrad, color: C.white, boxShadow: C.btnShadow }}
-                >
-                  {t.view_details || "Batafsil"}
+                <button type="button" onClick={() => setSel(v)} className="btn btn-wine btn-sm relative z-[2] mt-6 self-start">
+                  {t.vac_apply}<ArrowRight className="h-4 w-4" />
                 </button>
               </div>
-            );
-          })}
-        </div>
+            </StaggerItem>
+          ))}
+        </Stagger>
       </div>
 
-      {selectedVacancy && (
-        <VacancyDetailModal v={selectedVacancy} lang={lang} t={t} onClose={() => setSelectedVacancy(null)} />
-      )}
+      <Modal open={!!sel} onClose={() => { setSel(null); setStatus("idle"); }} label={t.vac_apply}>
+        {sel && (
+          <div className="p-7 sm:p-9">
+            <span className="eyebrow">{t.vac_apply}</span>
+            <h3 className="mt-4 pr-10 font-display text-2xl font-semibold">{pick(sel, "title", lang)}</h3>
+            {status === "ok" ? (
+              <div className="flex flex-col items-center py-10 text-center">
+                <CheckCircle2 className="h-14 w-14 text-gold-500" />
+                <p className="mt-4 font-display text-xl font-semibold">{t.form_success_title}</p>
+              </div>
+            ) : (
+              <form onSubmit={submit} className="mt-6 space-y-4">
+                <div><label className="field-label" htmlFor="vac-name">{t.form_name}</label><input id="vac-name" className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+                <div><label className="field-label" htmlFor="vac-phone">{t.form_phone}</label><input id="vac-phone" type="tel" className="input" required placeholder="+998" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+                <div><label className="field-label" htmlFor="vac-exp">{t.vac_experience}</label><textarea id="vac-exp" rows={4} className="input resize-none" placeholder={t.vac_experience_ph} value={form.exp} onChange={(e) => setForm({ ...form, exp: e.target.value })} /></div>
+                {status === "error" && <p className="rounded-xl bg-wine-500/15 px-4 py-3 text-sm font-medium text-wine-400">{t.form_error}</p>}
+                <button type="submit" disabled={status === "sending"} className="btn btn-gold w-full">
+                  {status === "sending" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {status === "sending" ? t.form_sending : t.form_submit}
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+      </Modal>
     </section>
   );
 }

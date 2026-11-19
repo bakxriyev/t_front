@@ -1,299 +1,121 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { C } from "@/lib/constants";
-import { getImageUrl } from "@/lib/utils";
-import { Loader2, ArrowLeft, Clock, GraduationCap, ChevronRight, BookOpen, CheckCircle } from "lucide-react";
 import Link from "next/link";
-import api from "@/lib/api-client";
-import { EnrollModal } from "@/components/ui/EnrollModal";
-
-interface CourseData {
-  id: number;
-  title_uz: string; title_ru: string; title_en: string;
-  description_uz: string; description_ru: string; description_en: string;
-  full_description_uz?: string; full_description_ru?: string; full_description_en?: string;
-  price: string;
-  duration: string;
-  level: string;
-  image: string;
-  order: number;
-  syllabus?: string[];
-}
-
-const LEVEL_COLORS: Record<string, string> = {
-  Foundation: "#4CAF50",
-  Intermediate: "#FF9800",
-  Advanced: "#E53935",
-  "All Levels": "#997157",
-};
-
-const LEVEL_LABELS: Record<string, Record<string, string>> = {
-  EN: { Foundation: "Foundation", Intermediate: "Intermediate", Advanced: "Advanced", "All Levels": "All Levels" },
-  RU: { Foundation: "Базовый", Intermediate: "Средний", Advanced: "Продвинутый", "All Levels": "Все уровни" },
-  UZ: { Foundation: "Boshlang'ich", Intermediate: "O'rta", Advanced: "Yuqori", "All Levels": "Barcha darajalar" },
-};
-
-const PRICE_SUFFIX: Record<string, string> = {
-  UZ: "so'm / oy",
-  RU: "сум / мес",
-  EN: "UZS/month",
-};
+import { useParams } from "next/navigation";
+import { ArrowLeft, BarChart3, Check, Clock, Wallet } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { API, byOrder, formatPrice, isActive, pick, useList, useOne, type Course } from "@/lib/content";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { SmartImage } from "@/components/ui/SmartImage";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { LeadForm } from "@/components/ui/LeadForm";
+import { Reveal, Stagger, StaggerItem } from "@/components/ui/Reveal";
+import { CourseCard } from "@/components/sections/Courses";
+import { Teachers } from "@/components/sections/Teachers";
 
 export default function CourseDetailClient() {
-  const params = useParams();
-  const router = useRouter();
+  const { id } = useParams<{ id: string }>();
   const { lang, t } = useLanguage();
-  const [data, setData] = useState<CourseData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [showEnroll, setShowEnroll] = useState(false);
+  const { data: course, loading, error } = useOne<Course>(id ? API.course(id) : null);
+  const { data: all } = useList<Course>(API.courses);
+  const others = all.filter((c) => isActive(c) && String(c.id) !== String(id)).sort(byOrder).slice(0, 3);
 
-  useEffect(() => {
-    if (!params?.id) return;
-    const fetchCourse = async () => {
-      try {
-        const res = await api.get(`/api/courses/offers/${params.id}`);
-        setData(res.data.data || res.data);
-      } catch {
-        try {
-          const res = await api.get("/api/courses/offers?is_active=true");
-          const courses: CourseData[] = res.data.data || res.data || [];
-          const found = courses.find((c) => String(c.id) === String(params.id));
-          setData(found || null);
-        } catch {
-          setData(null);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCourse();
-  }, [params?.id]);
-
-  const l = lang.toLowerCase() as "uz" | "ru" | "en";
-  const title = data ? (data as any)[`title_${l}`] || data.title_en || data.title_uz : "";
-  const description = data ? (data as any)[`description_${l}`] || data.description_en || data.description_uz : "";
-  const fullDescription = data
-    ? (data as any)[`full_description_${l}`] || (data as any)[`full_description_en`] || description
-    : "";
-  const levelLabel = data ? (LEVEL_LABELS[lang] || LEVEL_LABELS.EN)[data.level] || data.level : "";
-
-  if (loading) {
+  if (!loading && (error || !course)) {
     return (
-      <div>
-        <Navbar />
-        <div className="flex items-center justify-center min-h-[60vh]" style={{ paddingTop: "90px" }}>
-          <Loader2 className="h-8 w-8 animate-spin" style={{ color: C.gold }} />
+      <>
+        <PageHeader title={t.course_not_found} crumbs={[{ label: t.nav_courses, href: "/courses" }]} />
+        <div className="shell py-20 text-center">
+          <Link href="/courses" className="btn btn-wine"><ArrowLeft className="h-4 w-4" />{t.cta_back}</Link>
         </div>
-        <Footer />
-      </div>
+      </>
     );
   }
 
-  if (!data) {
-    return (
-      <div>
-        <Navbar />
-        <div className="flex flex-col items-center justify-center min-h-[60vh]" style={{ paddingTop: "90px" }}>
-          <h1 className="text-2xl font-bold mb-4" style={{ fontFamily: "'Playfair Display', serif", color: C.white }}>
-            Kurs topilmadi
-          </h1>
-          <Link
-            href="/courses"
-            className="inline-flex items-center gap-2 text-sm font-medium"
-            style={{ color: C.gold }}
-          >
-            <ArrowLeft size={16} /> Kurslar ro'yxatiga qaytish
-          </Link>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  const title = course ? pick(course, "title", lang) : "";
+  const desc = course ? pick(course, "description", lang) : "";
+  const price = course ? formatPrice(course.price, lang) : "";
+  const facts = course
+    ? [
+        { Icon: Clock, label: t.course_duration, value: course.duration?.trim() },
+        { Icon: BarChart3, label: t.course_level, value: course.level?.trim() },
+        { Icon: Wallet, label: t.course_price, value: price ? `${price} ${t.course_per_month}` : "" },
+      ].filter((f) => f.value)
+    : [];
 
   return (
-    <div style={{ color: C.white, fontFamily: "'Inter', sans-serif" }}>
-      <Navbar />
-      <div style={{ paddingTop: "90px" }}>
-        <div className="relative overflow-hidden" style={{ background: C.bg, minHeight: "100vh" }}>
-          <div className="absolute inset-0 pointer-events-none" style={{ background: C.sectionGlow }} />
+    <>
+      <PageHeader title={loading ? <Skeleton className="h-14 w-2/3 opacity-20" /> : title} crumbs={[{ label: t.nav_courses, href: "/courses" }, { label: title || "…" }]}>
+        <div className="flex flex-wrap gap-2">
+          {facts.map(({ Icon, label, value }) => (
+            <span key={label} className="glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold">
+              <Icon className="relative h-4 w-4 text-gold-300" />
+              <span className="relative text-white/60">{label}:</span>
+              <span className="relative">{value}</span>
+            </span>
+          ))}
+        </div>
+      </PageHeader>
 
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-8 md:py-12">
-            <div className="mb-6">
-              <Link
-                href="/courses"
-                className="inline-flex items-center gap-2 text-sm font-medium transition-colors hover:opacity-80"
-                style={{ color: C.gold }}
-              >
-                <ArrowLeft size={16} /> Kurslar ro'yxatiga qaytish
-              </Link>
-            </div>
+      <section className="section">
+        <div className="shell grid gap-10 lg:grid-cols-[1.25fr_0.75fr] lg:gap-14">
+          <div>
+            <Reveal>
+              {loading ? <Skeleton className="aspect-[16/9] w-full rounded-[32px]" /> : (
+                <SmartImage src={course?.image} alt={title} eager sizes="(max-width: 1024px) 100vw, 760px" className="aspect-[16/9] w-full rounded-[26px] shadow-lift ring-1 ring-white/10" />
+              )}
+            </Reveal>
+            <Reveal delay={0.05}>
+              <h2 className="h3 mt-12">{t.course_about}</h2>
+              {loading ? (
+                <div className="mt-5 space-y-3"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-5/6" /></div>
+              ) : (
+                <p className="prose-tls mt-5 whitespace-pre-line">{desc}</p>
+              )}
+            </Reveal>
+            <Reveal delay={0.1}>
+              <h2 className="h3 mt-12">{t.course_includes}</h2>
+              <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+                {[t.course_inc_1, t.course_inc_2, t.course_inc_3, t.course_inc_4].map((x) => (
+                  <li key={x} className="card flex items-center gap-3 p-4 text-[15px] font-semibold">
+                    <span className="icon-tile h-9 w-9 shrink-0 rounded-xl"><Check className="relative h-4 w-4" strokeWidth={3} /></span>
+                    {x}
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+          </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-              <div className="lg:col-span-3">
-                {data.image && (
-                  <div className="rounded-2xl overflow-hidden mb-8">
-                    <img
-                      src={getImageUrl(data.image)}
-                      alt={title}
-                      className="w-full h-auto max-h-[400px] object-cover"
-                      style={{ filter: "brightness(0.7)" }}
-                    />
-                  </div>
-                )}
-
-                <h1
-                  className="text-2xl sm:text-4xl font-bold leading-tight mb-4"
-                  style={{ fontFamily: "'Playfair Display', serif", color: C.white }}
-                >
-                  {title}
-                </h1>
-
-                <p className="text-base leading-relaxed mb-6" style={{ color: C.secondary }}>
-                  {description}
-                </p>
-
-                {fullDescription && (
-                  <div className="space-y-4 mb-8">
-                    <h2
-                      className="text-xl font-bold"
-                      style={{ fontFamily: "'Playfair Display', serif", color: C.white }}
-                    >
-                      {lang === "UZ" ? "To'liq ma'lumot" : lang === "RU" ? "Полная информация" : "Full Description"}
-                    </h2>
-                    <p className="text-sm leading-relaxed" style={{ color: C.muted, lineHeight: "1.8" }}>
-                      {fullDescription}
-                    </p>
-                  </div>
-                )}
-
-                {data.syllabus && data.syllabus.length > 0 && (
-                  <div className="mb-8">
-                    <h2
-                      className="text-xl font-bold mb-4"
-                      style={{ fontFamily: "'Playfair Display', serif", color: C.white }}
-                    >
-                      {lang === "UZ" ? "O'quv dasturi" : lang === "RU" ? "Учебная программа" : "Syllabus"}
-                    </h2>
-                    <div className="space-y-2">
-                      {data.syllabus.map((item, i) => (
-                        <div
-                          key={i}
-                          className="flex items-start gap-3 p-3 rounded-xl text-sm"
-                          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
-                        >
-                          <CheckCircle size={16} className="mt-0.5 flex-shrink-0" style={{ color: C.gold }} />
-                          <span style={{ color: C.secondary }}>{item}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="lg:col-span-2">
-                <div
-                  className="rounded-2xl p-6 sticky top-[110px]"
-                  style={{ background: C.card, border: "1px solid rgba(236,198,103,0.2)" }}
-                >
-                  <h3
-                    className="text-lg font-bold mb-5"
-                    style={{ fontFamily: "'Playfair Display', serif", color: C.white }}
-                  >
-                    {lang === "UZ" ? "Kurs haqida" : lang === "RU" ? "О курсе" : "About Course"}
-                  </h3>
-
-                  <div className="space-y-4 mb-6">
-                    <div
-                      className="flex items-center gap-3 p-3 rounded-xl"
-                      style={{ background: "rgba(255,255,255,0.03)" }}
-                    >
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{ background: "rgba(212,175,55,0.1)" }}
-                      >
-                        <Clock size={18} style={{ color: C.gold }} />
-                      </div>
-                      <div>
-                        <p className="text-xs" style={{ color: C.muted }}>
-                          {lang === "UZ" ? "Davomiylik" : lang === "RU" ? "Длительность" : "Duration"}
-                        </p>
-                        <p className="text-sm font-semibold" style={{ color: C.white }}>{data.duration}</p>
-                      </div>
-                    </div>
-
-                    <div
-                      className="flex items-center gap-3 p-3 rounded-xl"
-                      style={{ background: "rgba(255,255,255,0.03)" }}
-                    >
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{ background: "rgba(212,175,55,0.1)" }}
-                      >
-                        <GraduationCap size={18} style={{ color: C.gold }} />
-                      </div>
-                      <div>
-                        <p className="text-xs" style={{ color: C.muted }}>
-                          {lang === "UZ" ? "Daraja" : lang === "RU" ? "Уровень" : "Level"}
-                        </p>
-                        <p className="text-sm font-semibold" style={{ color: C.white }}>{levelLabel}</p>
-                      </div>
-                    </div>
-
-                    <div
-                      className="flex items-center gap-3 p-3 rounded-xl"
-                      style={{ background: "rgba(212,175,55,0.06)", border: "1px solid rgba(212,175,55,0.15)" }}
-                    >
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{ background: "rgba(212,175,55,0.15)" }}
-                      >
-                        <BookOpen size={18} style={{ color: C.gold }} />
-                      </div>
-                      <div>
-                        <p className="text-xs" style={{ color: C.muted }}>
-                          {lang === "UZ" ? "Narx" : lang === "RU" ? "Цена" : "Price"}
-                        </p>
-                        <p className="text-sm font-bold" style={{ color: C.gold }}>
-                          {data.price} {PRICE_SUFFIX[lang]}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setShowEnroll(true)}
-                    className="w-full py-3.5 rounded-xl flex items-center justify-center gap-2 font-semibold text-sm transition-all duration-300 hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-[0.98]"
-                    style={{ background: C.btnGrad, color: C.bg, boxShadow: C.btnShadow }}
-                  >
-                    {t.enroll}
-                    <ChevronRight size={16} />
-                  </button>
+          <aside className="lg:sticky lg:top-28 lg:self-start">
+            <Reveal>
+              <div className="card ring-grad overflow-hidden">
+                <div className="relative bg-gradient-to-br from-wine-700/70 via-wine-900/50 to-transparent p-6 text-white">
+                  <p className="relative font-accent text-[10px] font-medium uppercase tracking-[0.2em] text-white/55">{t.course_price}</p>
+                  <p className="num relative mt-1 text-3xl font-semibold text-gold-grad">{price || "—"}</p>
+                  {price && <p className="relative mt-1 text-sm text-white/60">{t.course_per_month}</p>}
+                </div>
+                <div className="p-6 sm:p-7">
+                  <h3 className="font-display text-xl font-semibold">{t.course_enroll}</h3>
+                  <p className="mb-5 mt-1 text-sm text-ink-muted">{t.enroll_sub}</p>
+                  {course && <LeadForm initialCourseId={course.id} source={`course-${course.id}`} />}
                 </div>
               </div>
-            </div>
-
-            <div className="mt-12 pt-8 border-t text-center" style={{ borderColor: C.border }}>
-              <Link
-                href="/courses"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 hover:-translate-y-0.5"
-                style={{ background: C.btnGrad, color: C.white, boxShadow: C.btnShadow }}
-              >
-                Barcha kurslar <ChevronRight size={16} />
-              </Link>
-            </div>
-          </div>
+            </Reveal>
+          </aside>
         </div>
-      </div>
-      <Footer />
+      </section>
 
-      {showEnroll && (
-        <EnrollModal course={String(data.id)} onClose={() => setShowEnroll(false)} />
+      <Teachers limit={4} />
+
+      {others.length > 0 && (
+        <section className="section">
+          <div className="shell">
+            <h2 className="h2 mb-10">{t.course_other}</h2>
+            <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {others.map((c) => <StaggerItem key={c.id}><CourseCard c={c} /></StaggerItem>)}
+            </Stagger>
+          </div>
+        </section>
       )}
-    </div>
+    </>
   );
 }

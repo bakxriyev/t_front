@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" role="img" aria-label="Tashkent Law School">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111113"/>
+      <stop offset="0.6" stop-color="#151012"/>
+      <stop offset="1" stop-color="#1b0d0f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.55">
+      <stop offset="0" stop-color="#701E20" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#701E20" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="1200" fill="url(#bg)"/>
+  <rect width="1200" height="1200" fill="url(#glow)"/>
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.05">
+    <circle cx="600" cy="560" r="260"/>
+    <circle cx="600" cy="560" r="360"/>
+    <path d="M0 220H1200M0 980H1200"/>
+  </g>
+  <g transform="translate(600 540)" fill="none" stroke="#8A262A" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0-150V150"/>
+    <path d="M-165-100H165"/>
+    <path d="M-165-100-225 15h120z"/>
+    <path d="M165-100 105 15h120z"/>
+    <path d="M-135 150H135"/>
+    <circle cx="0" cy="-150" r="18" fill="#8A262A" stroke="none"/>
+  </g>
+</svg>

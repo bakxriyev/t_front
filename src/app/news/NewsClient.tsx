@@ -1,17 +1,15 @@
 "use client";
 
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { NewsSection } from "@/components/sections/News";
 
 export default function NewsClient() {
+  const { t } = useLanguage();
   return (
-    <div>
-      <Navbar />
-      <div style={{ paddingTop: "90px" }}>
-        <NewsSection showAll />
-      </div>
-      <Footer />
-    </div>
+    <>
+      <PageHeader title={t.news_title} crumbs={[{ label: t.nav_news }]} />
+      <NewsSection limit={0} showHeading={false} />
+    </>
   );
 }

@@ -1,665 +1,241 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
-import { motion } from "framer-motion";
-import { Scale, Shield, Users, Globe, ArrowRight, Award, BookOpen, GraduationCap, ChevronLeft, ChevronRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+import { ArrowUpRight, Compass, Landmark, Star, Target, Trophy, Users } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useApiData, useApiSingle } from "@/hooks/useApiData";
-import { getImageUrl } from "@/lib/utils";
-import { C } from "@/lib/constants";
+import { API, byOrder, isActive, media, pick, toArray, tr, useList, useOne, type About as AboutT, type AboutValue, type Statistic, type TimelineItem } from "@/lib/content";
+import { BRANCHES } from "@/lib/constants";
+import { BROCHURE_STATS, GALLERY } from "@/lib/brochure";
+import { CountUp } from "@/components/ui/CountUp";
+import { NamedIcon } from "@/components/ui/Icons";
+import { Reveal, Stagger, StaggerItem } from "@/components/ui/Reveal";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { SmartImage } from "@/components/ui/SmartImage";
+import { Skeleton } from "@/components/ui/Skeleton";
 
-interface AboutData {
-  id: number;
-  content_uz: string;
-  content_ru: string;
-  content_en: string;
-  mission_uz: string;
-  mission_ru: string;
-  mission_en: string;
-  vision_uz: string;
-  vision_ru: string;
-  vision_en: string;
-  image: string;
-  images?: string[];
-  videos?: string[];
-}
+const STAT_ICONS = [Users, Trophy, Landmark, Star];
 
-type CarouselItem = { url: string; title: string; type: 'image' | 'video' };
+/* ------------------------------------------------------------------ Stats */
+export function Stats({ overlap = true }: { overlap?: boolean }) {
+  const { lang } = useLanguage();
+  const { data } = useList<Statistic>(API.stats);
+  const api = data.filter(isActive).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const stats = api.length ? api : BROCHURE_STATS;
 
-interface AboutValue {
-  id: number;
-  key: string;
-  title_uz: string;
-  title_ru: string;
-  title_en: string;
-  description_uz: string;
-  description_ru: string;
-  description_en: string;
-}
-
-interface TimelineItemData {
-  id: number;
-  year: string;
-  title_uz: string;
-  title_ru: string;
-  title_en: string;
-  description_uz: string;
-  description_ru: string;
-  description_en: string;
-}
-
-interface StatItem {
-  id: number;
-  value: number;
-  suffix?: string;
-  label_uz: string;
-  label_ru: string;
-  label_en: string;
-  order: number;
-}
-
-interface HeroData {
-  id: number;
-  title_uz?: string;
-  title_ru?: string;
-  title_en?: string;
-  image?: string;
-}
-
-const ALL_VALUE_ICONS: Record<string, any> = {
-  integrity: Scale, excellence: Shield, community: Users, innovation: Globe,
-  leadership: Award, growth: GraduationCap, education: BookOpen,
-  trust: Shield, quality: Award, global: Globe, support: Users,
-};
-
-function GoldText({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <motion.span
-      className={className}
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6 }}
-      style={{
-        background: C.goldGrad,
-        WebkitBackgroundClip: "text",
-        WebkitTextFillColor: "transparent",
-        backgroundClip: "text",
-        display: "inline",
-      }}
-    >
-      {children}
-    </motion.span>
+    <section className={`relative z-10 ${overlap ? "pt-10 sm:pt-14" : "py-10"}`}>
+      <div className="shell">
+        <Stagger className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          {stats.slice(0, 4).map((s, i) => {
+            const Icon = STAT_ICONS[i % STAT_ICONS.length];
+            return (
+              <StaggerItem key={s.id}>
+                <div className="card card-hover spot flex h-full items-center gap-4 p-4 sm:p-5">
+                  <span className="icon-tile relative z-[2] h-11 w-11">
+                    {"icon" in s && s.icon ? <NamedIcon name={s.icon} className="relative h-5 w-5" /> : <Icon className="relative h-5 w-5" strokeWidth={1.8} />}
+                  </span>
+                  <div className="relative z-[2] min-w-0">
+                    <p className="num text-2xl font-semibold text-white sm:text-[28px]">
+                      <CountUp value={Number(s.value) || 0} suffix={s.suffix ?? ""} />
+                    </p>
+                    <p className="mt-1 text-[13px] font-medium leading-snug text-ink-muted">{pick(s, "label", lang)}</p>
+                  </div>
+                </div>
+              </StaggerItem>
+            );
+          })}
+        </Stagger>
+      </div>
+    </section>
   );
 }
 
-const VALUE_ICONS: Record<string, any> = ALL_VALUE_ICONS;
+/* ------------------------------------------------------------------ About (home + about page) */
+export function About({ full = false }: { full?: boolean }) {
+  const { lang, t } = useLanguage();
+  const { data: about, loading } = useOne<AboutT>(API.about);
+  const { data: values } = useList<AboutValue>(API.aboutValues);
 
-function AboutGallery({ items }: { items: CarouselItem[] }) {
-  const [index, setIndex] = useState(0);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const thumbnailsRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (thumbnailsRef.current) {
-      let scrollPosition = 0;
-      for (let i = 0; i < index; i++) {
-        scrollPosition += 35 + 2;
-      }
-      scrollPosition += 2;
-      const containerWidth = thumbnailsRef.current.offsetWidth;
-      const centerOffset = containerWidth / 2 - 120 / 2;
-      scrollPosition -= centerOffset;
-      thumbnailsRef.current.scrollTo({ left: scrollPosition, behavior: 'smooth' });
-    }
-  }, [index]);
-
-  useEffect(() => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.play().catch(() => {});
-      } else {
-        videoRef.current.pause();
-      }
-    }
-  }, [index, isPlaying]);
-
-  const item = items[index];
+  const images = [...toArray(about?.images), ...toArray(about?.image)].filter((v, i, a) => a.indexOf(v) === i);
+  const content = pick(about, "content", lang);
+  const mission = pick(about, "mission", lang);
+  const vision = pick(about, "vision", lang);
+  const vals = [...values].sort(byOrder);
+  const words = t.about_title.split(" ");
 
   return (
-    <div className="relative flex flex-col gap-3">
-      <div
-        className="relative rounded-3xl overflow-hidden"
-        style={{ border: `1px solid ${C.border}` }}
-      >
-        <div className="aspect-[4/5] relative bg-black/40">
-          {item?.type === 'video' ? (
-            <>
-              <video
-                ref={videoRef}
-                src={item.url}
-                className="absolute inset-0 w-full h-full object-cover"
-                muted
-                loop
-                playsInline
-                onClick={() => setIsPlaying((p) => !p)}
-              />
-              <div className="absolute bottom-3 left-3 z-10">
-                <button
-                  onClick={() => setIsPlaying((p) => !p)}
-                  className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all hover:scale-110"
-                  style={{ background: "rgba(0,0,0,0.5)" }}
-                >
-                  {isPlaying ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
-                  )}
-                </button>
+    <section id="about" className="section">
+      <div className="shell grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+        <Reveal className="relative mx-auto w-full max-w-[440px]">
+          <div className="ring-grad relative aspect-[5/6] overflow-hidden rounded-[32px] shadow-lift">
+            {loading ? (
+              <Skeleton className="h-full w-full rounded-none" />
+            ) : images[0] ? (
+              <SmartImage src={images[0]} alt="Tashkent Law School" className="h-full w-full" sizes="(max-width: 1024px) 90vw, 440px" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={GALLERY[0]} alt="Tashkent Law School" className="h-full w-full object-cover" loading="lazy" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-night/80 via-transparent to-transparent" />
+            <div className="glass absolute bottom-4 left-4 right-4 flex items-center gap-3 rounded-2xl p-3.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/logo-192.png" alt="" className="relative h-11 w-11 rounded-full ring-1 ring-gold-400/40" />
+              <div className="relative min-w-0">
+                <p className="font-display text-lg font-semibold leading-tight">Tashkent Law School</p>
+                <p className="truncate text-xs text-white/65">{BRANCHES.map((b) => tr(b.short, lang)).join(" · ")}</p>
               </div>
-            </>
+            </div>
+          </div>
+          <div className="absolute -right-3 -top-4 hidden w-36 overflow-hidden rounded-2xl ring-4 ring-night shadow-lift sm:block lg:-right-10">
+            {images[1] ? (
+              <SmartImage src={images[1]} alt="" className="aspect-square w-full" sizes="144px" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={GALLERY[3]} alt="" className="aspect-square w-full object-cover" loading="lazy" />
+            )}
+          </div>
+          <div className="absolute -left-4 top-10 hidden rounded-2xl bg-grad-gold px-4 py-3 text-wine-950 shadow-gold sm:block lg:-left-10">
+            <p className="num text-2xl leading-none">2023</p>
+            <p className="mt-1 text-[11px] font-bold">{t.founded_label}</p>
+          </div>
+        </Reveal>
+
+        <div>
+          <SectionHeading
+            align="left"
+            eyebrow={t.about_eyebrow}
+            title={<>{words.slice(0, -1).join(" ")} <span className="text-gold-grad">{words.slice(-1)}</span></>}
+          />
+          {loading ? (
+            <div className="-mt-4 space-y-3"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-11/12" /><Skeleton className="h-4 w-2/3" /></div>
           ) : (
-            <>
-              <Image
-                src={item?.url || '/images/about-campus.jpg'}
-                alt={item?.title || ''}
-                fill
-                className="object-cover select-none pointer-events-none"
-                draggable={false}
-                priority
-              />
-              <div
-                className="absolute inset-0"
-                style={{
-                  background: `linear-gradient(to top, ${C.bg}99 0%, transparent 60%)`,
-                }}
-              />
-            </>
+            content && (
+              <Reveal>
+                <p className={`prose-tls -mt-4 whitespace-pre-line ${full ? "" : "line-clamp-5"}`}>{content}</p>
+              </Reveal>
+            )
           )}
 
-          {items.length > 1 && (
-            <>
-              {index > 0 && (
-                <button
-                  onClick={() => setIndex((i) => i - 1)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all hover:scale-110 z-10"
-                  style={{ background: "rgba(0,0,0,0.5)" }}
-                >
-                  <ChevronLeft className="w-4 h-4 text-white" />
-                </button>
-              )}
-              {index < items.length - 1 && (
-                <button
-                  onClick={() => setIndex((i) => i + 1)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all hover:scale-110 z-10"
-                  style={{ background: "rgba(0,0,0,0.5)" }}
-                >
-                  <ChevronRight className="w-4 h-4 text-white" />
-                </button>
-              )}
-              <div
-                className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md z-10"
-                style={{ background: "rgba(0,0,0,0.6)", color: C.white }}
-              >
-                {index + 1} / {items.length}
-              </div>
-            </>
+          {(mission || vision) && (
+            <Stagger className="mt-7 grid gap-3 sm:grid-cols-2">
+              {[
+                { title: t.about_mission, text: mission, Icon: Target },
+                { title: t.about_vision, text: vision, Icon: Compass },
+              ]
+                .filter((x) => x.text)
+                .map(({ title, text, Icon }) => (
+                  <StaggerItem key={title}>
+                    <div className="card card-hover spot h-full p-5">
+                      <div className="relative z-[2] flex items-center gap-3">
+                        <span className="icon-tile-gold h-10 w-10 rounded-xl"><Icon className="relative h-[18px] w-[18px]" strokeWidth={1.8} /></span>
+                        <h3 className="font-display text-xl font-semibold">{title}</h3>
+                      </div>
+                      <p className={`relative z-[2] mt-3 whitespace-pre-line text-[15px] leading-relaxed text-ink-soft ${full ? "" : "line-clamp-3"}`}>{text}</p>
+                    </div>
+                  </StaggerItem>
+                ))}
+            </Stagger>
+          )}
+
+          {vals.length > 0 && !full && (
+            <Reveal delay={0.08} className="mt-6 flex flex-wrap gap-2">
+              {vals.map((v) => (
+                <span key={v.id} className="rounded-full border border-white/10 bg-white/[.04] px-3.5 py-1.5 text-sm font-semibold text-gold-200">
+                  {pick(v, "title", lang)}
+                </span>
+              ))}
+            </Reveal>
+          )}
+
+          {!full && (
+            <Reveal delay={0.12}>
+              <Link href="/about" className="btn btn-wine group mt-8">
+                {t.about_more}
+                <ArrowUpRight className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </Link>
+            </Reveal>
           )}
         </div>
       </div>
 
-      {items.length > 1 && (
-        <div
-          ref={thumbnailsRef}
-          className="overflow-x-auto"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          <style>{`.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
-          <div className="flex gap-0.5 h-20" style={{ width: 'fit-content' }}>
-            {items.map((it, i) => (
-              <motion.button
-                key={i}
-                onClick={() => { setIndex(i); setIsPlaying(true); }}
-                initial={false}
-                animate={i === index ? 'active' : 'inactive'}
-                variants={{
-                  active: { width: 120, marginLeft: 2, marginRight: 2 },
-                  inactive: { width: 35, marginLeft: 0, marginRight: 0 },
-                }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-                className="relative shrink-0 h-full overflow-hidden rounded-lg"
-                style={i === index ? { border: `2px solid ${C.gold}`, boxShadow: `0 0 12px ${C.gold}40` } : { border: '2px solid transparent' }}
-              >
-                {it.type === 'video' ? (
-                  <div className="w-full h-full relative">
-                    <video src={it.url} className="w-full h-full object-cover" muted />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
-                    </div>
-                  </div>
-                ) : (
-                  <img
-                    src={it.url}
-                    alt={it.title}
-                    className="w-full h-full object-cover pointer-events-none select-none"
-                    draggable={false}
-                  />
-                )}
-              </motion.button>
+      {full && images.length > 2 && (
+        <div className="shell mt-14">
+          <Stagger className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {images.slice(2).map((src) => (
+              <StaggerItem key={src}>
+                <SmartImage src={src} alt="" className="aspect-square w-full rounded-2xl" sizes="(max-width: 768px) 50vw, 25vw" imgClassName="transition-transform duration-700 hover:scale-105" />
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         </div>
       )}
-    </div>
+
+      {full && toArray(about?.videos).length > 0 && (
+        <div className="shell mt-8 grid gap-3 md:grid-cols-2">
+          {toArray(about?.videos).map((v) => (
+            <video key={v} src={media(v) || undefined} controls playsInline preload="metadata" className="aspect-video w-full rounded-2xl bg-black object-cover" />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
-export function About() {
+/* ------------------------------------------------------------------ Values (about page) */
+export function Values() {
   const { lang, t } = useLanguage();
-  const { data: about, loading } = useApiSingle<AboutData>('/api/about');
-  const { data: valuesData } = useApiData<AboutValue>('/api/about-values');
-  const { data: timelineData } = useApiData<TimelineItemData>('/api/timeline');
-  const { data: statsData } = useApiData<StatItem>('/api/statistics/public');
-  const { data: heroData } = useApiData<HeroData>('/api/hero');
-
-  const lng = lang.toLowerCase();
-  const missionText = about ? (about as unknown as Record<string, string>)[`mission_${lng}`] || about.mission_en : t.about_mission_desc;
-  const visionText = about ? (about as unknown as Record<string, string>)[`vision_${lng}`] || about.vision_en : t.about_vision_desc;
-  const contentText = about ? (about as unknown as Record<string, string>)[`content_${lng}`] || about.content_en : null;
-
-  const carouselItems = useMemo(() => {
-    const items: CarouselItem[] = [];
-    const aboutImages = about?.images && Array.isArray(about.images) && about.images.length > 0
-      ? about.images
-      : (about?.image ? [about.image] : []);
-    aboutImages.forEach((img: string) => {
-      items.push({ url: getImageUrl(img), title: "Tashkent Law School", type: 'image' });
-    });
-    const aboutVideos = about?.videos && Array.isArray(about.videos) ? about.videos : [];
-    aboutVideos.forEach((vid: string) => {
-      items.push({ url: getImageUrl(vid), title: "Video", type: 'video' });
-    });
-    if (Array.isArray(heroData)) {
-      heroData.slice(0, 4).forEach((h) => {
-        if (h.image) {
-          const title = (h as any)[`title_${lng}`] || (h as any).title_en || "";
-          items.push({ url: getImageUrl(h.image), title, type: 'image' });
-        }
-      });
-    }
-    return items.length > 0 ? items : [{ url: '/images/about-campus.jpg', title: "Tashkent Law School", type: 'image' as const }];
-  }, [about, heroData, lng]);
-
-  const values = Array.isArray(valuesData) ? valuesData : [];
-  const timeline = Array.isArray(timelineData) ? timelineData : [];
-
-  const getMultilang = (item: any, prefix: string) =>
-    (item as unknown as Record<string, string>)[`${prefix}_${lng}`] || (item as unknown as Record<string, string>)[`${prefix}_en`] || "";
-
+  const { data } = useList<AboutValue>(API.aboutValues);
+  const vals = [...data].sort(byOrder);
+  if (!vals.length) return null;
+  const icons = ["ShieldCheck", "Award", "Users", "Sparkles", "Scale", "Landmark"];
   return (
-    <section
-      id="about"
-      className="relative py-10 md:py-16 overflow-hidden section-glass"
-      style={{ background: "rgba(13,13,13,0.5)" }}
-    >
-      <div className="absolute inset-0 pointer-events-none" style={{ background: C.sectionGlow }} />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Section header */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-10 md:mb-20"
-        >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-8 h-px" style={{ background: C.gold }} />
-            <span
-              className="text-xs uppercase tracking-[0.25em] font-sans"
-              style={{ color: C.gold }}
-            >
-              {t.about_label || "Our Story"}
-            </span>
-            <div className="w-8 h-px" style={{ background: C.gold }} />
-          </div>
+    <section className="section">
+      <div className="shell">
+        <SectionHeading eyebrow={t.about_values} title={t.about_values} />
+        <Stagger className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {vals.map((v, i) => (
+            <StaggerItem key={v.id}>
+              <div className="card card-hover spot h-full p-5">
+                <span className="icon-tile relative z-[2] h-11 w-11"><NamedIcon name={icons[i % icons.length]} className="relative h-5 w-5" strokeWidth={1.8} /></span>
+                <h3 className="relative z-[2] mt-4 font-display text-xl font-semibold">{pick(v, "title", lang)}</h3>
+                <p className="relative z-[2] mt-1.5 text-sm leading-relaxed text-ink-soft">{pick(v, "description", lang)}</p>
+              </div>
+            </StaggerItem>
+          ))}
+        </Stagger>
+      </div>
+    </section>
+  );
+}
 
-          <h2
-            className="font-serif text-2xl md:text-4xl lg:text-5xl font-bold mb-4"
-            style={{ color: C.white }}
-          >
-            <GoldText>{t.about_title || "Shaping the Legal Leaders of Tomorrow"}</GoldText>
-          </h2>
-          <div
-            className="w-20 h-1 mx-auto"
-            style={{ background: C.goldGrad }}
-          />
-        </motion.div>
-
-        {/* Two-column content */}
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 mb-16 md:mb-32">
-          {/* LEFT — Gallery Carousel */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-50px" }}
-            transition={{ duration: 0.7, ease: "easeOut" }}
-            className="relative"
-          >
-            <AboutGallery items={carouselItems} />
-
-            {/* Floating badge */}
-            {(() => {
-              const statsArr = Array.isArray(statsData) ? statsData : [];
-              const firstStat = statsArr.length > 0 ? statsArr[0] : null;
-              const badgeVal = firstStat ? firstStat.value : 12;
-              const badgeSuffix = firstStat ? (firstStat.suffix || "+") : "+";
-              const badgeLabel = firstStat
-                ? ((firstStat as unknown as Record<string, string>)[`label_${lng}`] || firstStat.label_en)
-                : (lang === "UZ" ? "Yillik mukammallik" : lang === "RU" ? "Лет опыта" : "Years of Excellence");
-              return (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                  className="absolute -bottom-6 -right-6 px-6 py-4 rounded-2xl shadow-2xl z-10"
-                  style={{
-                    background: C.burGrad,
-                    border: `1px solid ${C.burgundy}`,
-                  }}
-                >
-                  <p className="font-serif text-3xl md:text-4xl font-bold leading-none mb-1" style={{ color: C.gold }}>
-                    {badgeVal}{badgeSuffix}
-                  </p>
-                  <p className="text-xs uppercase tracking-wider font-sans" style={{ color: C.white }}>
-                    {badgeLabel}
-                  </p>
-                </motion.div>
-              );
-            })()}
-          </motion.div>
-
-          {/* RIGHT — Mission, Vision, Value cards */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: "-50px" }}
-            transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
-          >
-            {/* Mission */}
-            <div className="mb-8">
-              <h3
-                className="font-serif text-xl md:text-2xl font-semibold mb-3"
-                style={{ color: C.gold }}
-              >
-                {t.about_mission}
-              </h3>
-              <p
-                className="text-base leading-relaxed font-sans"
-                style={{ color: C.secondary }}
-              >
-                {missionText}
-              </p>
-            </div>
-
-            {/* Vision */}
-            <div className="mb-10">
-              <h3
-                className="font-serif text-xl md:text-2xl font-semibold mb-3"
-                style={{ color: C.gold }}
-              >
-                {t.about_vision}
-              </h3>
-              <p
-                className="text-base leading-relaxed font-sans"
-                style={{ color: C.secondary }}
-              >
-                {visionText}
-              </p>
-            </div>
-
-            {/* Value cards */}
-            <div className="grid grid-cols-2 gap-4">
-              {(values.length > 0 ? values : [
-                { id: 0, key: "integrity", title_uz: "Halollik", title_ru: "Честность", title_en: "Integrity", description_uz: "Yuridik ta'lim va amaliyotda eng yuqori axloqiy standartlarni qo'llab-quvvatlash.", description_ru: "", description_en: "", order: 0 } as AboutValue,
-                { id: 1, key: "excellence", title_uz: "Mukammallik", title_ru: "Превосходство", title_en: "Excellence", description_uz: "Har bir dasturda akademik qat'iyat va professional mahoratga intilish.", description_ru: "", description_en: "", order: 1 } as AboutValue,
-                { id: 2, key: "community", title_uz: "Hamjamiyat", title_ru: "Сообщество", title_en: "Community", description_uz: "Talabalar, bitiruvchilar va yuridik mutaxassislarning qo'llab-quvvatlovchi tarmog'ini qurish.", description_ru: "", description_en: "", order: 2 } as AboutValue,
-                { id: 3, key: "innovation", title_uz: "Innovatsiya", title_ru: "Инновации", title_en: "Innovation", description_uz: "Zamonaviy o'qitish usullari va global huquqiy istiqbollarni qabul qilish.", description_ru: "", description_en: "", order: 3 } as AboutValue,
-              ]).map((val) => {
-                const apiVal = values.find((v) => v.key === val.key) || val;
-                const Icon = VALUE_ICONS[val.key] || Scale;
-                const title = getMultilang(apiVal, "title");
-                const desc = getMultilang(apiVal, "description");
-                return (
-                  <motion.div
-                    key={val.id}
-                    whileHover={{ y: -4 }}
-                    className="p-4 md:p-5 rounded-2xl transition-all duration-300 cursor-default"
-                    style={{
-                      background: C.card,
-                      border: `1px solid ${C.border}`,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = C.gold;
-                      e.currentTarget.style.boxShadow = `0 8px 30px ${C.gold}15`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = C.border;
-                      e.currentTarget.style.boxShadow = "none";
-                    }}
-                  >
-                    <Icon
-                      className="w-6 h-6 mb-3"
-                      style={{ color: C.gold }}
-                    />
-                    <h4
-                      className="font-serif text-base md:text-lg font-semibold mb-2"
-                      style={{ color: C.white }}
-                    >
-                      {title}
-                    </h4>
-                    <p
-                      className="text-xs md:text-sm leading-relaxed font-sans"
-                      style={{ color: C.muted }}
-                    >
-                      {desc}
-                    </p>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Content section from API */}
-        {contentText && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-50px" }}
-            transition={{ duration: 0.6 }}
-            className="max-w-3xl mx-auto mb-16 md:mb-32 text-center"
-          >
-            <p
-              className="text-base md:text-lg leading-relaxed font-sans"
-              style={{ color: C.secondary }}
-            >
-              {contentText}
-            </p>
-          </motion.div>
-        )}
-
-        {/* Timeline */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.7 }}
-        >
-          <div className="text-center mb-12">
-            <h3
-              className="font-serif text-2xl md:text-3xl font-bold"
-              style={{ color: C.white }}
-            >
-              <GoldText>{t.about_journey}</GoldText>
-            </h3>
-          </div>
-
-          <div className="relative">
-            <div
-              className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-px hidden lg:block"
-              style={{ background: `linear-gradient(to bottom, transparent, ${C.gold}40, ${C.gold}40, transparent)` }}
-            />
-
-            <div className="relative lg:space-y-0 hidden lg:block">
-              {timeline.map((item, index) => {
-                const isRight = index % 2 === 0;
-                const title = getMultilang(item, "title") || (t as any)[`about_timeline_${index + 1}_title`] || "";
-                const desc = getMultilang(item, "description") || (t as any)[`about_timeline_${index + 1}_desc`] || "";
-                return (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-30px" }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className={`relative flex items-center mb-8 lg:mb-12 last:mb-0 ${
-                      isRight ? "lg:flex-row" : "lg:flex-row-reverse"
-                    }`}
-                  >
-                    <div className="absolute left-1/2 -translate-x-1/2 z-10 hidden lg:flex">
-                      <div
-                        className="w-4 h-4 rounded-full"
-                        style={{
-                          background: C.goldGrad,
-                          boxShadow: `0 0 16px ${C.gold}60`,
-                        }}
-                      />
-                    </div>
-
-                    <div
-                      className={`w-full lg:w-[calc(50%-2rem)] ${
-                        isRight ? "lg:pr-8 lg:text-right" : "lg:pl-8 lg:text-left"
-                      }`}
-                    >
-                      <div
-                        className="p-5 md:p-6 rounded-2xl transition-all duration-300"
-                        style={{
-                          background: C.card,
-                          border: `1px solid ${C.border}`,
-                        }}
-                      >
-                        <span
-                          className="inline-block font-serif text-3xl md:text-4xl font-bold mb-2"
-                          style={{
-                            background: C.goldGrad,
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                            backgroundClip: "text",
-                          }}
-                        >
-                          {item.year}
-                        </span>
-                        <h4
-                          className="font-serif text-lg md:text-xl font-semibold mb-2"
-                          style={{ color: C.white }}
-                        >
-                          {title}
-                        </h4>
-                        <p
-                          className="text-sm leading-relaxed font-sans"
-                          style={{ color: C.secondary }}
-                        >
-                          {desc}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="hidden lg:block lg:w-[calc(50%-2rem)]" />
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            {/* Mobile timeline */}
-            <div className="relative lg:hidden mt-2">
-              <div
-                className="absolute left-4 top-0 bottom-0 w-px"
-                style={{ background: `linear-gradient(to bottom, ${C.gold}40, ${C.gold}40, transparent)` }}
-              />
-              {timeline.map((item, index) => {
-                const title = getMultilang(item, "title") || (t as any)[`about_timeline_${index + 1}_title`] || "";
-                const desc = getMultilang(item, "description") || (t as any)[`about_timeline_${index + 1}_desc`] || "";
-                return (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, margin: "-30px" }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="relative pl-10 pb-8 last:pb-0"
-                >
-                  <div
-                    className="absolute left-[11px] top-1 w-2.5 h-2.5 rounded-full z-10"
-                    style={{
-                      background: C.goldGrad,
-                      boxShadow: `0 0 10px ${C.gold}60`,
-                    }}
-                  />
-                  <div
-                    className="p-4 rounded-2xl"
-                    style={{
-                      background: C.card,
-                      border: `1px solid ${C.border}`,
-                    }}
-                  >
-                    <span
-                      className="inline-block font-serif text-2xl font-bold mb-1"
-                      style={{
-                        background: C.goldGrad,
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        backgroundClip: "text",
-                      }}
-                    >
-                      {item.year}
-                    </span>
-                    <h4
-                      className="font-serif text-base font-semibold mb-1"
-                      style={{ color: C.white }}
-                    >
-                      {title}
-                    </h4>
-                    <p
-                      className="text-xs leading-relaxed font-sans"
-                      style={{ color: C.secondary }}
-                    >
-                      {desc}
-                    </p>
-                  </div>
-                </motion.div>
-              )})}
-            </div>
-          </div>
-        </motion.div>
-
-        <div className="text-center mt-10">
-          <Link
-            href="/about"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium transition-all duration-200 hover:-translate-y-0.5"
-            style={{
-              fontFamily: "'Inter', sans-serif",
-              background: C.btnGrad,
-              color: C.white,
-              boxShadow: C.btnShadow,
-            }}
-          >
-            Batafsil
-            <ArrowRight size={16} />
-          </Link>
+/* ------------------------------------------------------------------ Timeline (about page) */
+export function Timeline() {
+  const { lang, t } = useLanguage();
+  const { data } = useList<TimelineItem>(API.timeline);
+  const items = [...data].sort((a, b) => String(a.year).localeCompare(String(b.year)) || byOrder(a, b));
+  if (!items.length) return null;
+  return (
+    <section className="section">
+      <div className="shell">
+        <SectionHeading eyebrow={t.about_journey} title={t.about_journey} />
+        <div className="relative mx-auto max-w-3xl">
+          <div className="absolute bottom-2 left-[19px] top-2 w-px bg-gradient-to-b from-gold-400/70 via-wine-500/50 to-transparent sm:left-1/2" />
+          <ul className="space-y-8">
+            {items.map((it, i) => (
+              <Reveal as="li" key={it.id} className="relative grid gap-3 pl-14 sm:grid-cols-2 sm:gap-12 sm:pl-0">
+                <span className="absolute left-2.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-grad-gold shadow-gold sm:left-1/2 sm:-translate-x-1/2">
+                  <span className="h-2 w-2 rounded-full bg-wine-900" />
+                </span>
+                <div className={i % 2 ? "sm:order-2 sm:pl-10" : "sm:pr-10 sm:text-right"}>
+                  <p className="num text-gold-grad text-3xl font-semibold">{it.year}</p>
+                </div>
+                <div className={`card rounded-2xl p-5 ${i % 2 ? "sm:order-1 sm:mr-10" : "sm:ml-10"}`}>
+                  <h3 className="font-display text-xl font-semibold">{pick(it, "title", lang)}</h3>
+                  {pick(it, "description", lang) && <p className="mt-1.5 text-[15px] leading-relaxed text-ink-soft">{pick(it, "description", lang)}</p>}
+                </div>
+              </Reveal>
+            ))}
+          </ul>
         </div>
       </div>
     </section>

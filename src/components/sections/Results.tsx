@@ -1,238 +1,177 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { GraduationCap, ScrollText, Trophy } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useApiData } from "@/hooks/useApiData";
-import { getImageUrl } from "@/lib/utils";
-import { C } from "@/lib/constants";
-import { SectionLabel } from "@/components/ui/SectionLabel";
-import { GoldText } from "@/components/ui/GoldText";
-import SimpleMarquee from "@/components/ui/SimpleMarquee";
-import { X, Award } from "lucide-react";
+import { API, isActive, media, pick, toArray, useList, type Result } from "@/lib/content";
+import { ADMISSIONS, BROCHURE_RESULTS } from "@/lib/brochure";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { SmartImage } from "@/components/ui/SmartImage";
+import { Modal } from "@/components/ui/Modal";
+import { Marquee } from "@/components/ui/Marquee";
+import { CountUp } from "@/components/ui/CountUp";
+import { Reveal } from "@/components/ui/Reveal";
 
-interface ResultData {
-  id: number;
-  student_name_uz: string;
-  student_name_ru: string;
-  student_name_en: string;
-  achievement_uz: string;
-  achievement_ru: string;
-  achievement_en: string;
-  description_uz?: string;
-  description_ru?: string;
-  description_en?: string;
-  year: string;
-  photo?: string;
-  photos?: string[];
+function photosOf(r: Result): string[] {
+  return (r.photos && r.photos.length ? r.photos : toArray(r.photo)).filter(Boolean);
 }
+
+/** Admin-uploaded result image, shown as-is in the same frame as the brochure cards. */
+function ResultCard({ r }: { r: Result }) {
+  const { lang } = useLanguage();
+  const name = pick(r, "student_name", lang);
+  return (
+    <SmartImage
+      src={photosOf(r)[0]}
+      alt={name}
+      fallbackText={name}
+      sizes="230px"
+      className="aspect-[400/499] w-full rounded-[18px] ring-1 ring-white/10"
+    />
+  );
+}
+
+type Sel = { kind: "pdf"; i: number } | { kind: "api"; r: Result };
 
 export function Results() {
   const { lang, t } = useLanguage();
-  const { data: results, loading } = useApiData<ResultData>("/api/results?is_active=true");
-  const [selected, setSelected] = useState<ResultData | null>(null);
-
-  const l = lang.toLowerCase() as "uz" | "ru" | "en";
-  const getName = (item: ResultData) =>
-    item[`student_name_${l}`] || item.student_name_en;
-  const getAchievement = (item: ResultData) =>
-    item[`achievement_${l}`] || item.achievement_en;
-  const getPhoto = (item: ResultData) => item.photos?.[0] || item.photo;
-  const getDescription = (item: ResultData) =>
-    item[`description_${l}`] || item.description_en || "";
-
-  const photos = results.filter((r) => r.photos?.length || r.photo);
-
-  if (loading) {
-    return (
-      <section className="relative overflow-hidden py-10 md:py-16" style={{ background: "rgba(13,13,13,0.5)" }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionLabel>{t.results_label || "Track Record"}</SectionLabel>
-          <h2 className="text-2xl sm:text-5xl font-bold mb-10" style={{ fontFamily: "'Playfair Display', serif" }}>
-            <GoldText>{t.results_title || "Our Achievements"}</GoldText>
-          </h2>
-          <div className="flex justify-center py-20">
-            <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: `${C.gold}40`, borderTopColor: C.gold }} />
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  if (results.length === 0) return null;
-
-  const ImageCard = ({ item, className = "" }: { item: ResultData; className?: string }) => (
-    <div
-      className={`relative group cursor-pointer overflow-hidden rounded-xl shrink-0 ${className}`}
-      onClick={() => setSelected(item)}
-      style={{ width: 180 }}
-    >
-      <img
-        src={getImageUrl(getPhoto(item))}
-        alt={getName(item)}
-        className="w-full aspect-[9/16] object-cover transition-all duration-500 group-hover:scale-105"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-          <p className="text-white text-sm font-bold font-serif leading-tight">{getName(item)}</p>
-          <p className="text-xs mt-1 leading-tight" style={{ color: C.gold }}>{getAchievement(item)}</p>
-        </div>
-      </div>
-    </div>
-  );
-
-  const marqueeRows = [
-    { direction: "left" as const, baseVelocity: 10 },
-    { direction: "right" as const, baseVelocity: 12 },
-  ];
+  const { data } = useList<Result>(API.results);
+  const api = data.filter(isActive).sort((a, b) => (b.year ?? 0) - (a.year ?? 0) || b.id - a.id);
+  const [sel, setSel] = useState<Sel | null>(null);
+  const [photoIdx, setPhotoIdx] = useState(0);
+  const selPhotos = sel?.kind === "api" ? photosOf(sel.r) : [];
 
   return (
-    <section
-      className="relative overflow-hidden py-10 md:py-16"
-      style={{ background: "rgba(13,13,13,0.5)" }}
-      id="results"
-    >
-      <div className="absolute inset-0 pointer-events-none" style={{ background: C.sectionGlow }} />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 mb-8 md:mb-12">
-        <SectionLabel>{t.results_label || "Track Record"}</SectionLabel>
-        <h2
-          className="text-2xl sm:text-5xl font-bold"
-          style={{ fontFamily: "'Playfair Display', serif" }}
-        >
-          <GoldText>{t.results_title || "Our Achievements"}</GoldText>
-        </h2>
+    <section id="results" className="section overflow-hidden">
+      <div className="shell">
+        <SectionHeading
+          eyebrow={t.results_eyebrow}
+          title={<>{t.results_title.split("—")[0]}{t.results_title.includes("—") && <span className="text-gold-grad">— {t.results_title.split("—")[1]}</span>}</>}
+          sub={t.results_sub}
+        />
+
+        {/* Headline figures, styled like the brochure's gold plaques */}
+        <div className="mx-auto mb-12 grid max-w-3xl gap-4 sm:grid-cols-2">
+          {[
+            { v: 500, label: t.results_big1, Icon: GraduationCap },
+            { v: 3000, label: t.results_big2, Icon: ScrollText },
+          ].map(({ v, label, Icon }, i) => (
+            <Reveal key={label} delay={i * 0.1}>
+              <div className="group relative overflow-hidden rounded-[26px] bg-gradient-to-b from-[#ffe9a3] to-[#f5c64e] px-7 py-6 text-wine-900 shadow-[0_24px_50px_-24px_rgba(240,192,82,.8)] ring-4 ring-[#ffe9a3]/25 transition-transform duration-500 hover:-translate-y-1">
+                <Icon className="absolute -right-3 -top-3 h-24 w-24 rotate-12 text-wine-900/10 transition-transform duration-700 group-hover:rotate-0" />
+                <p className="num text-5xl leading-none sm:text-6xl"><CountUp value={v} suffix="+" /></p>
+                <p className="mt-2 text-base font-bold">{label}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
       </div>
 
-      {photos.length === 0 ? (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-            {results.map((item, i) => {
-              const Icon = [Award, Award, Award, Award, Award, Award][i % 6];
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-5 p-7 rounded-2xl"
-                  style={{ background: C.card, border: `1px solid ${C.border}` }}
-                >
-                  <div
-                    className="flex items-center justify-center flex-shrink-0 rounded-xl"
-                    style={{ width: 56, height: 56, background: C.burGrad, color: C.gold }}
-                  >
-                    <Icon size={24} />
-                  </div>
-                  <div className="flex flex-col">
-                    <span
-                      className="text-3xl font-bold"
-                      style={{
-                        fontFamily: "'Playfair Display', serif",
-                        background: C.goldGrad,
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        backgroundClip: "text",
-                      }}
-                    >
-                      {item.year}
-                    </span>
-                    <span className="text-sm mt-1" style={{ fontFamily: "'Inter', sans-serif", color: C.secondary }}>
-                      {getAchievement(item)}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      {/* Auto-scrolling strip of real results (pauses on hover) */}
+      <Reveal>
+        <Marquee speed={70} gap="gap-4 pr-4" className="mask-fade-x py-3">
+          {BROCHURE_RESULTS.map((r, i) => (
+            <button
+              key={r.img}
+              type="button"
+              onClick={() => setSel({ kind: "pdf", i })}
+              className="group/card w-[200px] shrink-0 sm:w-[230px]"
+              aria-label={`${r.name} — BMBA ${r.bmba}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/images/pdf/results/${r.img}.webp`}
+                alt={`${r.name}: ${t.law_label} ${r.law}, ${t.bmba_label} ${r.bmba}`}
+                loading="lazy"
+                width={400}
+                height={499}
+                className="aspect-[400/499] w-full rounded-[18px] object-cover ring-1 ring-white/10 transition-[transform,box-shadow] duration-500 ease-silk group-hover/card:-translate-y-2 group-hover/card:shadow-[0_24px_40px_-18px_rgba(240,192,82,.6)] group-hover/card:ring-gold-400/50"
+              />
+            </button>
+          ))}
+          {api.map((r) => (
+            <button
+              key={`api-${r.id}`}
+              type="button"
+              onClick={() => { setSel({ kind: "api", r }); setPhotoIdx(0); }}
+              className="group/card w-[200px] shrink-0 text-left sm:w-[230px]"
+              aria-label={pick(r, "student_name", lang)}
+            >
+              <div className="rounded-[18px] transition-[transform,box-shadow] duration-500 ease-silk group-hover/card:-translate-y-2 group-hover/card:shadow-[0_24px_40px_-18px_rgba(240,192,82,.6)]">
+                <ResultCard r={r} />
+              </div>
+            </button>
+          ))}
+        </Marquee>
+      </Reveal>
+
+      {/* TDYU 2026 admission results: grant / contract (from the Instagram landing page) */}
+      <Reveal className="mt-10">
+        <div className="shell mb-4 flex items-center gap-3">
+          <span className="eyebrow">{t.admission_title}</span>
         </div>
-      ) : (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-2 md:space-y-3"
-          style={{
-            maskImage: 'linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%)',
-          }}
-        >
-            {marqueeRows.map((row, rowIndex) => (
-              <SimpleMarquee
-                key={rowIndex}
-                direction={row.direction}
-                baseVelocity={row.baseVelocity}
-                repeat={10}
-                slowdownOnHover
-                draggable
-                grabCursor
-                className="py-1"
-              >
-                  <div className="flex gap-4 md:gap-5 px-2">
-                  {photos.map((item) => (
-                    <ImageCard key={item.id} item={item} />
+        <Marquee speed={60} reverse gap="gap-4 pr-4" className="mask-fade-x py-3">
+          {ADMISSIONS.map((a) => (
+            <a
+              key={a.img}
+              href={`/images/admission/${a.img}.webp`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group/card w-[160px] shrink-0 sm:w-[180px]"
+              aria-label={`${a.name} — ${a.kind === "grant" ? t.grant : t.contract}, ${a.score}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/images/admission/${a.img}.webp`}
+                alt={`${a.name} — TDYU, ${a.kind === "grant" ? t.grant : t.contract}, ${a.score}`}
+                loading="lazy"
+                width={720}
+                height={1280}
+                className="aspect-[9/16] w-full rounded-[18px] object-cover ring-1 ring-white/10 transition-[transform,box-shadow] duration-500 ease-silk group-hover/card:-translate-y-2 group-hover/card:shadow-[0_24px_40px_-18px_rgba(240,192,82,.6)] group-hover/card:ring-gold-400/50"
+              />
+            </a>
+          ))}
+        </Marquee>
+      </Reveal>
+
+      <Modal open={!!sel} onClose={() => setSel(null)} size={sel?.kind === "pdf" ? "sm" : "xl"} label={t.results_title}>
+        {sel?.kind === "pdf" && (
+          <div className="p-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/images/pdf/results/${BROCHURE_RESULTS[sel.i].img}.webp`} alt={BROCHURE_RESULTS[sel.i].name} className="w-full rounded-[20px]" />
+            <div className="flex items-center justify-between gap-3 px-2 pb-1 pt-4">
+              <p className="font-display text-xl font-black">{BROCHURE_RESULTS[sel.i].name}</p>
+              <p className="num text-gold-grad text-2xl">{BROCHURE_RESULTS[sel.i].bmba}</p>
+            </div>
+          </div>
+        )}
+        {sel?.kind === "api" && (
+          <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="relative bg-black/40 lg:rounded-l-[30px]">
+              <AnimatePresence mode="wait">
+                <motion.div key={photoIdx} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {selPhotos[photoIdx] && <img src={media(selPhotos[photoIdx]) || ""} alt="" className="max-h-[78vh] w-full object-contain lg:rounded-l-[30px]" />}
+                </motion.div>
+              </AnimatePresence>
+              {selPhotos.length > 1 && (
+                <div className="absolute inset-x-0 bottom-4 flex justify-center gap-2">
+                  {selPhotos.map((_, i) => (
+                    <button key={i} type="button" aria-label={`Photo ${i + 1}`} onClick={() => setPhotoIdx(i)} className={`h-2 rounded-full transition-all ${i === photoIdx ? "w-8 bg-gold-400" : "w-2 bg-white/40"}`} />
                   ))}
                 </div>
-              </SimpleMarquee>
-            ))}
+              )}
+            </div>
+            <div className="p-7 sm:p-10">
+              {sel.r.year ? <span className="num rounded-full bg-grad-gold px-3 py-1 text-xs text-wine-950">{sel.r.year}</span> : null}
+              <h3 className="mt-4 font-display text-3xl font-black">{pick(sel.r, "student_name", lang)}</h3>
+              {pick(sel.r, "achievement", lang) && <p className="mt-3 flex gap-2 text-lg text-gold-200"><Trophy className="mt-1 h-5 w-5 shrink-0 text-gold-400" />{pick(sel.r, "achievement", lang)}</p>}
+              {pick(sel.r, "description", lang) && <p className="mt-6 whitespace-pre-line leading-relaxed text-white/70">{pick(sel.r, "description", lang)}</p>}
+            </div>
           </div>
-      )}
-
-      {/* Lightbox Modal */}
-      <AnimatePresence>
-        {selected && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6"
-            style={{ background: "rgba(0,0,0,0.88)", backdropFilter: "blur(16px)" }}
-            onClick={() => setSelected(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative max-w-4xl w-full max-h-[90vh] rounded-2xl overflow-hidden"
-              style={{ border: `1px solid ${C.border}` }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setSelected(null)}
-                className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all hover:scale-110"
-                style={{ background: "rgba(0,0,0,0.6)", color: "white" }}
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <div className="bg-black flex items-center justify-center">
-                <img
-                  src={getImageUrl(getPhoto(selected))}
-                  alt={getName(selected)}
-                  className="max-w-full max-h-[70vh] object-contain mx-auto"
-                />
-              </div>
-              <div className="p-5 md:p-7" style={{ background: C.card }}>
-                <p className="text-white text-lg md:text-2xl font-bold font-serif">{getName(selected)}</p>
-                <p className="text-sm md:text-base mt-1" style={{ color: C.gold }}>
-                  {getAchievement(selected)}
-                </p>
-                {getDescription(selected) && (
-                  <p className="text-xs md:text-sm mt-3 leading-relaxed" style={{ color: C.secondary }}>
-                    {getDescription(selected)}
-                  </p>
-                )}
-                <div className="flex items-center gap-2 mt-3">
-                  <span
-                    className="inline-block font-serif text-lg font-bold"
-                    style={{
-                      background: C.goldGrad,
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
-                    }}
-                  >
-                    {selected.year}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
         )}
-      </AnimatePresence>
+      </Modal>
     </section>
   );
 }

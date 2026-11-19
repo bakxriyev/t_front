@@ -1,17 +1,18 @@
 "use client";
 
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
-import { Teachers } from "@/components/sections/Teachers";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Teachers, Team } from "@/components/sections/Teachers";
+import { Contact } from "@/components/sections/Contact";
 
 export default function TeachersClient() {
+  const { t } = useLanguage();
   return (
-    <div>
-      <Navbar />
-      <div style={{ paddingTop: "90px" }}>
-        <Teachers />
-      </div>
-      <Footer />
-    </div>
+    <>
+      <PageHeader title={t.teachers_title} sub={t.teachers_sub} crumbs={[{ label: t.nav_teachers }]} />
+      <Teachers showHeading={false} />
+      <Team />
+      <Contact />
+    </>
   );
 }

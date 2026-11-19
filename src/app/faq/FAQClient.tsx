@@ -1,17 +1,17 @@
 "use client";
 
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { FAQ } from "@/components/sections/FAQ";
+import { Contact } from "@/components/sections/Contact";
 
 export default function FAQClient() {
+  const { t } = useLanguage();
   return (
-    <div>
-      <Navbar />
-      <div style={{ paddingTop: "90px" }}>
-        <FAQ />
-      </div>
-      <Footer />
-    </div>
+    <>
+      <PageHeader title={t.faq_title} sub={t.faq_more} crumbs={[{ label: t.nav_faq }]} />
+      <FAQ />
+      <Contact />
+    </>
   );
 }

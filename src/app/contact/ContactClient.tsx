@@ -1,17 +1,17 @@
 "use client";
 
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Branches } from "@/components/sections/Branches";
 import { Contact } from "@/components/sections/Contact";
 
 export default function ContactClient() {
+  const { t } = useLanguage();
   return (
-    <div>
-      <Navbar />
-      <div style={{ paddingTop: "90px" }}>
-        <Contact />
-      </div>
-      <Footer />
-    </div>
+    <>
+      <PageHeader title={t.contact_title} sub={t.contact_sub} crumbs={[{ label: t.nav_contact }]} />
+      <Branches />
+      <Contact />
+    </>
   );
 }

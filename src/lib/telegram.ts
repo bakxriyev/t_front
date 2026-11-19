@@ -1,28 +1,32 @@
-const BOT_TOKEN = process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN || "8907076441:AAFZT4K2fzDB7QtXNXbt4xXfFJMsd_EzLLg";
-const CHANNEL_ID = process.env.NEXT_PUBLIC_TELEGRAM_CHANNEL_ID || "-1003812873981";
-const VACANCY_CHANNEL_ID = process.env.NEXT_PUBLIC_TELEGRAM_VACANCY_CHANNEL_ID || "-1004434989300";
+/**
+ * Client helper: leads are sent through the server route /api/lead,
+ * which formats the message and posts it to the Telegram leads channel.
+ * The bot token never reaches the browser.
+ */
+export type LeadPayload = {
+  kind?: "lead" | "vacancy";
+  name: string;
+  phone: string;
+  course?: string;
+  branch?: string;
+  question?: string;
+  position?: string;
+  experience?: string;
+  source?: string;
+  lang?: string;
+  website?: string;
+};
 
-export async function sendToTelegram(text: string, toVacancyChannel = false): Promise<{ success: boolean; error?: string }> {
-  const chatId = toVacancyChannel ? VACANCY_CHANNEL_ID : CHANNEL_ID;
+export async function sendLead(payload: LeadPayload): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    const r = await fetch("/api/lead", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+      body: JSON.stringify(payload),
     });
-    const data = await res.json();
-    if (!data.ok) {
-      return { success: false, error: data.description || "Telegram error" };
-    }
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message || "Network error" };
+    const data = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    return data.ok ? { success: true } : { success: false, error: data.error || `HTTP ${r.status}` };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Network error" };
   }
-}
-
-export function formatDate(): string {
-  const now = new Date();
-  return now.toLocaleDateString("uz-UZ", { year: "numeric", month: "2-digit", day: "2-digit" }) +
-    "  " +
-    now.toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
 }

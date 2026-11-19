@@ -1,140 +1,226 @@
 "use client";
 
-import { ArrowRight, Play, Scale, BookOpen } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { ArrowRight, GraduationCap, Volume2, VolumeX } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useApiData } from "@/hooks/useApiData";
+import { API, byOrder, isActive, isVideoFile, media, pick, tr, useList, type Hero as HeroT } from "@/lib/content";
+import { DIRECTIONS } from "@/lib/constants";
+import { INSTITUTIONS } from "@/lib/brochure";
+import { useEnroll } from "@/components/providers/EnrollProvider";
+import { useSectionNav } from "@/components/layout/Navbar";
+import { Marquee } from "@/components/ui/Marquee";
 
-import { C } from "@/lib/constants";
-import { motion } from "framer-motion";
+const EASE = [0.22, 1, 0.36, 1] as const;
 
-interface HeroSlide {
-  id: number;
-  title_uz: string;
-  title_ru: string;
-  title_en: string;
-  subtitle_uz: string;
-  subtitle_ru: string;
-  subtitle_en: string;
-  description_uz: string;
-  description_ru: string;
-  description_en: string;
-  button_text_uz: string;
-  button_text_ru: string;
-  button_text_en: string;
-  button_link: string;
-  image: string;
-  order: number;
-  is_active: boolean;
+/** Splits a title so the final word(s) can be rendered with the gold gradient. */
+function splitTitle(title: string): [string, string] {
+  const words = title.split(/\s+/).filter(Boolean);
+  if (words.length <= 2) return ["", title];
+  const tail = words.length > 4 ? 2 : 1;
+  return [words.slice(0, -tail).join(" "), words.slice(-tail).join(" ")];
 }
 
-export function Hero({ onApply }: { onApply: () => void }) {
+export function Hero() {
   const { lang, t } = useLanguage();
-  const { data: slides, loading } = useApiData<HeroSlide>('/api/hero?is_active=true');
-  const slide = !loading && slides.length > 0 ? slides[0] : null;
+  const { open } = useEnroll();
+  const go = useSectionNav();
+  const { data: slides } = useList<HeroT>(API.hero);
+  const slide = slides.filter(isActive).sort(byOrder)[0] ?? null;
 
-  const lng = lang.toLowerCase();
-  const title = slide ? (slide as unknown as Record<string, string>)[`title_${lng}`] || slide.title_en : t.hero_h1;
-  const subtitle = slide ? (slide as unknown as Record<string, string>)[`subtitle_${lng}`] || slide.subtitle_en : t.hero_sub;
-  const description = slide ? (slide as unknown as Record<string, string>)[`description_${lng}`] || (slide as unknown as Record<string, string>)[`description_en`] || "" : t.hero_body;
-  const buttonText = slide ? (slide as unknown as Record<string, string>)[`button_text_${lng}`] || (slide as unknown as Record<string, string>)[`button_text_en`] || "" : t.enroll;
-  const buttonLink = slide?.button_link || "#about";
+  const ref = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [muted, setMuted] = useState(true);
+  const [src, setSrc] = useState<string | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  const videoY = useTransform(scrollYProgress, [0, 1], ["0%", "16%"]);
+  const contentY = useTransform(scrollYProgress, [0, 1], [0, -80]);
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.65], [1, 0]);
+
+  const apiVideo = slide?.video_url && isVideoFile(slide.video_url) ? media(slide.video_url) : null;
+
+  // Pick the lighter file on small screens; the poster image shows instantly meanwhile.
+  useEffect(() => {
+    const small = window.matchMedia("(max-width: 767px)").matches;
+    setSrc(apiVideo || (small ? "/videos/hero-mobile.mp4" : "/videos/hero.mp4"));
+  }, [apiVideo]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !src) return;
+    v.muted = true;
+    v.play().catch(() => {});
+  }, [src]);
+
+  const title = pick(slide, "title", lang);
+  const subtitle = pick(slide, "subtitle", lang);
+  const description = pick(slide, "description", lang);
+  const btnText = pick(slide, "button_text", lang);
+  const btnLink = slide?.button_link?.trim();
+  const fullTitle = title || [t.hero_title_a, t.hero_title_b, t.hero_title_c].filter(Boolean).join(" ");
+  const [head, tail] = splitTitle(fullTitle);
+
+  const toggleSound = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setMuted(v.muted);
+    if (!v.muted) v.play().catch(() => {});
+  };
+
+  const word = { hidden: { opacity: 0, y: "0.55em" }, show: { opacity: 1, y: 0 } };
 
   return (
-    <section id="home" className="relative min-h-[60vh] md:min-h-screen flex items-center overflow-hidden md:pt-[90px]" style={{ paddingTop: "60px" }}>
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full" style={{ background: C.heroGlow1 }} />
-        <div className="absolute top-0 right-0 w-full h-full" style={{ background: C.heroGlow2 }} />
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full opacity-[0.04] pointer-events-none"
-          style={{ background: `radial-gradient(circle, ${C.gold} 0%, transparent 70%)` }}
-        />
-      </div>
+    <section ref={ref} id="home" className="relative isolate flex min-h-[100svh] flex-col overflow-hidden text-white">
+      {/* Background video */}
+      <motion.div className="absolute inset-0 -z-10 bg-night will-change-transform" style={{ y: videoY }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/images/hero-poster.jpg" alt="" aria-hidden="true" className="absolute inset-0 h-full w-full scale-105 object-cover" fetchPriority="high" />
+        {src && (
+          <video
+            ref={videoRef}
+            key={src}
+            className={`absolute inset-0 h-full w-full scale-105 object-cover transition-opacity duration-1000 ${playing ? "opacity-100" : "opacity-0"}`}
+            onPlaying={() => setPlaying(true)}
+            src={src}
+            poster="/images/hero-poster.jpg"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            aria-hidden="true"
+          />
+        )}
+      </motion.div>
+      {/* Brand tint + legibility; the bottom fades into the site background */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-night/95 via-wine-950/70 to-night/20" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-night via-night/5 to-night/50" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(45%_55%_at_0%_45%,rgba(146,28,33,.45),transparent_70%)]" />
 
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[15%] right-[8%] opacity-[0.03] rotate-12 hidden lg:block">
-          <Scale className="w-32 h-32" style={{ color: C.gold }} />
-        </div>
-        <div className="absolute bottom-[20%] left-[5%] opacity-[0.025] -rotate-6 hidden lg:block">
-          <BookOpen className="w-28 h-28" style={{ color: C.gold }} />
-        </div>
-      </div>
-
-      <div className="absolute left-0 top-0 bottom-0 w-px hidden lg:block" style={{ background: `linear-gradient(180deg, transparent 0%, ${C.gold}20 30%, ${C.gold}20 70%, transparent 100%)` }} />
-      <div className="absolute right-0 top-0 bottom-0 w-px hidden lg:block" style={{ background: `linear-gradient(180deg, transparent 0%, ${C.gold}20 30%, ${C.gold}20 70%, transparent 100%)` }} />
-
-      <div className="max-w-[1200px] mx-auto px-4 md:px-6 w-full relative z-10">
-        <div style={{ maxWidth: "100%", margin: "0 auto", textAlign: "center" }}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
-            <div className="inline-flex items-center gap-2 md:gap-3 mb-4 md:mb-6 px-3 md:px-5 py-1.5 md:py-2 rounded-full" style={{ background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.15)" }}>
-              <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full" style={{ background: C.goldGrad }} />
-              <span className="text-[9px] md:text-[10px] tracking-[0.2em] md:tracking-[0.25em] uppercase font-semibold font-sans" style={{ color: C.gold }}>Est. 2013 · Tashkent, Uzbekistan</span>
-              <div className="w-1 h-1 md:w-1.5 md:h-1.5 rounded-full" style={{ background: C.goldGrad }} />
-            </div>
+      <motion.div style={{ y: contentY, opacity: contentOpacity }} className="shell relative flex flex-1 flex-col justify-center pb-32 pt-36 sm:pt-40">
+        <div className="max-w-3xl">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: EASE, delay: 0.15 }}>
+            <span className="glass-blur inline-flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-4 text-[13px] font-semibold text-white/90">
+              <span className="icon-tile-gold h-7 w-7 rounded-full"><GraduationCap className="relative h-4 w-4" /></span>
+              {description && description.length < 60 ? description : t.hero_badge}
+            </span>
           </motion.div>
 
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="font-serif leading-[1.15] mb-3 md:mb-4"
-            style={{ color: C.white, fontSize: "clamp(1.5rem, 3.5vw, 2.5rem)", fontWeight: 700 }}
+            className="display mt-7 text-balance"
+            initial="hidden"
+            animate="show"
+            transition={{ staggerChildren: 0.06, delayChildren: 0.25 }}
+            style={title && slide?.title_font_size ? { fontSize: `clamp(2.75rem, 6.6vw, ${slide.title_font_size})` } : undefined}
           >
-            {title}
+            {head.split(" ").filter(Boolean).map((w, i) => (
+              <motion.span key={`h${i}`} variants={word} transition={{ duration: 0.8, ease: EASE }} className="mr-[0.22em] inline-block">
+                {w}
+              </motion.span>
+            ))}
+            {tail && (
+              <motion.span variants={word} transition={{ duration: 0.8, ease: EASE }} className="text-gold-grad inline-block pb-1 pr-1">
+                {tail}
+              </motion.span>
+            )}
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.8 }}
-            className="italic mb-2 font-serif"
-            style={{ color: C.gold, fontSize: "clamp(0.8rem, 1.5vw, 1rem)", fontWeight: 400 }}
+            transition={{ duration: 0.8, ease: EASE, delay: 0.6 }}
+            className="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-white/75 sm:text-xl"
           >
-            &mdash; {subtitle}
+            {subtitle || t.hero_sub}
           </motion.p>
 
-          {description && (
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.0 }}
-              className="leading-relaxed mb-4 md:mb-6 mx-auto font-sans"
-              style={{ color: C.secondary, fontSize: "clamp(0.75rem, 1.3vw, 0.9rem)", fontWeight: 400, maxWidth: "42rem" }}
-            >
-              {description}
-            </motion.p>
-          )}
-
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1.2 }}
-            className="flex flex-wrap justify-center gap-3 md:gap-4 mb-8 md:mb-14"
+            transition={{ duration: 0.8, ease: EASE, delay: 0.75 }}
+            className="mt-10 flex flex-wrap items-center gap-3"
           >
-            <button
-              onClick={onApply}
-              className="group flex items-center gap-2 px-5 md:px-7 py-3 md:py-3.5 rounded-xl md:rounded-2xl font-bold text-xs md:text-sm transition-all duration-300 hover:-translate-y-1 active:translate-y-0.5 font-sans"
-              style={{ background: C.btnGrad, color: C.white, boxShadow: C.btnShadow }}
-            >
-              {buttonText || t.enroll} <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+            <button type="button" onClick={() => open()} className="btn btn-gold btn-lg group">
+              {t.cta_enroll}
+              <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
-            <a
-              href={buttonLink}
-              className="group flex items-center gap-2 px-5 md:px-7 py-3 md:py-3.5 rounded-xl md:rounded-2xl font-bold text-xs md:text-sm transition-all duration-300 hover:-translate-y-1 active:translate-y-0.5 border-2 font-sans"
-              style={{ borderColor: "rgba(212,175,55,0.35)", color: C.gold }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.background = "rgba(212,175,55,0.06)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(212,175,55,0.35)"; e.currentTarget.style.background = "transparent"; }}
-            >
-              <Play className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" /> {t.learn_more}
-            </a>
+            {btnText && btnLink ? (
+              <a href={btnLink} className="btn glass-blur btn-lg text-white">{btnText}</a>
+            ) : (
+              <button type="button" onClick={() => go("courses")} className="btn glass-blur btn-lg text-white hover:text-gold-200">
+                {t.nav_courses}
+              </button>
+            )}
           </motion.div>
 
-
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.9, delay: 0.95 }}
+            className="mt-12 flex flex-wrap items-center gap-x-5 gap-y-3"
+          >
+            <span className="font-accent text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">{t.hero_universities}</span>
+            <div className="flex flex-wrap gap-2">
+              {INSTITUTIONS.filter((u) => u.kind === "study").map((u) => (
+                <span key={u.key} title={tr(u.name, lang)} className="glass-blur inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-3.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={u.img} alt="" className="h-8 w-8 object-contain drop-shadow" />
+                  <span className="font-accent text-xs font-extrabold tracking-wide text-white">{u.short}</span>
+                </span>
+              ))}
+            </div>
+          </motion.div>
         </div>
 
+        {/* Glass stat card (desktop) */}
+        <motion.div
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 1, ease: EASE, delay: 0.9 }}
+          className="absolute bottom-36 right-8 hidden xl:block"
+        >
+          <div className="glass-blur w-72 rounded-[26px] p-5">
+            <div className="relative flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/logos/tsul-2025.png" alt="TDYU" className="h-12 w-12 rounded-full ring-1 ring-gold-400/40" />
+              <div>
+                <p className="num text-gold-grad text-2xl font-semibold leading-none">26%</p>
+                <p className="mt-1.5 text-xs leading-snug text-white/75">
+                  {lang === "RU" ? "первокурсников ТГЮУ 2026 — из TLS" : lang === "EN" ? "of TSUL 2026 freshmen are from TLS" : "2026-yil TDYU talabalari — TLS’dan"}
+                </p>
+              </div>
+            </div>
+            <div className="relative mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+              <motion.div className="h-full rounded-full bg-grad-gold" initial={{ width: 0 }} animate={{ width: "26%" }} transition={{ duration: 1.4, delay: 1.4, ease: EASE }} />
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Bottom bar: sound toggle + directions marquee */}
+      <div className="absolute inset-x-0 bottom-0">
+        <div className="shell mb-4 flex justify-end">
+          <button
+            type="button"
+            onClick={toggleSound}
+            aria-label={muted ? "Unmute" : "Mute"}
+            className="glass-blur flex h-11 w-11 items-center justify-center rounded-full text-white/85 transition hover:text-white"
+          >
+            {muted ? <VolumeX className="h-[18px] w-[18px]" /> : <Volume2 className="h-[18px] w-[18px]" />}
+          </button>
+        </div>
+        <div className="border-y border-white/10 bg-white/[.04] py-4">
+          <Marquee speed={45} className="mask-fade-x">
+            {DIRECTIONS.map((d) => (
+              <span key={d.uz} className="flex items-center gap-10 whitespace-nowrap text-[15px] font-semibold text-white/85">
+                {tr(d, lang)}
+                <span className="h-1.5 w-1.5 rotate-45 bg-gold-400" />
+              </span>
+            ))}
+          </Marquee>
+        </div>
       </div>
     </section>
   );

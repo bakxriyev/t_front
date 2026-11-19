@@ -1,27 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Courses } from "@/components/sections/Courses";
-import { Stats } from "@/components/sections/Stats";
-import { EnrollModal } from "@/components/ui/EnrollModal";
+import { FAQ } from "@/components/sections/FAQ";
+import { CourseSystem, Promotions } from "@/components/sections/Brochure";
+import { Contact } from "@/components/sections/Contact";
 
 export default function CoursesClient() {
-  const [enrollCourse, setEnrollCourse] = useState<string | null>(null);
-  const [showEnroll, setShowEnroll] = useState(false);
-
+  const { t } = useLanguage();
   return (
-    <div>
-      <Navbar />
-      <div style={{ paddingTop: "90px" }}>
-        <Courses onEnroll={(c) => { setShowEnroll(true); setEnrollCourse(c); }} />
-        <Stats />
-      </div>
-      <Footer />
-      {showEnroll && (
-        <EnrollModal course={enrollCourse} onClose={() => { setShowEnroll(false); setEnrollCourse(null); }} />
-      )}
-    </div>
+    <>
+      <PageHeader title={t.courses_title} sub={t.courses_sub} crumbs={[{ label: t.nav_courses }]} />
+      <Courses showHeading={false} />
+      <CourseSystem />
+      <Promotions />
+      <FAQ />
+      <Contact />
+    </>
   );
 }

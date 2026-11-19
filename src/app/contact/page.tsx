@@ -2,13 +2,9 @@ import type { Metadata } from "next";
 import ContactClient from "./ContactClient";
 
 export const metadata: Metadata = {
-  title: "Aloqa — Bogʻlanish",
-  description:
-    "Tashkent Law School bilan bogʻlanish: manzil, telefon, email, Telegram. Chilonzor tumani, Toshkent, Oʻzbekiston. Huquq kurslari va yuridik taʼlim boʻyicha barcha savollaringizga javob beramiz.",
-  openGraph: {
-    title: "Aloqa — Tashkent Law School",
-    description: "Biz bilan bogʻlaning: +998 71 234-56-78, info@tashkentlawschool.uz. Toshkent, Chilonzor.",
-  },
+  title: "Aloqa va filiallar — Chilonzor, Yunusobod, Urganch",
+  description: "Tashkent Law School filiallari manzillari: Chilonzor va Yunusobod (Toshkent), Urganch (Xorazm). Telefon: +998 55 055 23 23. Филиалы в Ташкенте и Ургенче.",
+  alternates: { canonical: "/contact" },
 };
 
 export default function ContactPage() {

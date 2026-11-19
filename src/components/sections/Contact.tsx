@@ -1,268 +1,85 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { MapPin, Phone, Mail, Clock, Send, MessageCircle, Instagram, Facebook, Youtube, Linkedin, CheckCircle, Loader2, Globe } from "lucide-react";
+import { Clock, Mail, MapPin, Phone } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useApiSingle, useApiData } from "@/hooks/useApiData";
-import { SectionLabel } from "@/components/ui/SectionLabel";
-import { C } from "@/lib/constants";
-import { AnimatedText } from "@/components/ui/AnimatedText";
-import { sendToTelegram, formatDate } from "@/lib/telegram";
-import type { LucideIcon } from "lucide-react";
-
-interface Settings {
-  id: number;
-  phone: string;
-  email: string;
-  address_uz: string;
-  address_ru: string;
-  address_en: string;
-  working_hours_uz: string;
-  working_hours_ru: string;
-  working_hours_en: string;
-  logo?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-}
-
-const SOCIAL_ICONS: Record<string, LucideIcon> = {
-  telegram: MessageCircle,
-  instagram: Instagram,
-  facebook: Facebook,
-  youtube: Youtube,
-  linkedin: Linkedin,
-  tiktok: Youtube,
-  whatsapp: Phone,
-  twitter: MessageCircle,
-  github: Globe,
-  website: Globe,
-};
-
-const SOCIAL_COLORS: Record<string, string> = {
-  telegram: "#229ED9",
-  instagram: "#E1306C",
-  facebook: "#1877F2",
-  youtube: "#FF0000",
-  linkedin: "#0077B5",
-  tiktok: "#000000",
-  whatsapp: "#25D366",
-  twitter: "#1DA1F2",
-  github: "#333333",
-};
+import { API, phoneHref, pick, prettyPhone, useOne, type Settings } from "@/lib/content";
+import { CONTACT } from "@/lib/constants";
+import { LeadForm } from "@/components/ui/LeadForm";
+import { Reveal } from "@/components/ui/Reveal";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { SocialIcon } from "@/components/ui/Icons";
+import { useSocials } from "@/components/layout/Footer";
 
 export function Contact() {
   const { lang, t } = useLanguage();
-  const { data: settings } = useApiSingle<Settings>("/api/settings");
-  const { data: socialLinks } = useApiData<{ id: number; platform: string; url: string }>("/api/social-links");
+  const { data: s } = useOne<Settings>(API.settings);
+  const socials = useSocials();
+  const phone = prettyPhone(s?.phone) || CONTACT.phone;
+  const address = pick(s, "address", lang);
+  const hours = pick(s, "working_hours", lang);
 
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-
-  const contactInfo = useMemo(() => {
-    if (!settings) return [];
-    return [
-      { icon: <MapPin size={18} />, label: "Address", value: (settings as any)[`address_${lang.toLowerCase()}`] || "" },
-      { icon: <Phone size={18} />, label: "Phone", value: settings.phone || "" },
-      { icon: <Mail size={18} />, label: "Email", value: settings.email || "" },
-      { icon: <Clock size={18} />, label: "Working Hours", value: (settings as any)[`working_hours_${lang}`] || "" },
-    ];
-  }, [settings, lang]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !phone.trim()) return;
-    setSending(true);
-    const dateStr = formatDate();
-    const text = `<b>📬 Yangi xabar — Kontakt formasi</b>\n━━━━━━━━━━━━━━━━━━━\n\n👤 <b>Ism:</b>  ${name.trim()}\n📞 <b>Telefon:</b>  ${phone.trim()}\n💬 <b>Xabar:</b>  ${message.trim() || "—"}\n\n━━━━━━━━━━━━━━━━━━━\n📅 ${dateStr}`;
-    const result = await sendToTelegram(text);
-    if (result.success) {
-      setSent(true);
-      setName("");
-      setPhone("");
-      setMessage("");
-      setTimeout(() => setSent(false), 3000);
-    }
-    setSending(false);
-  };
-
+  const rows = [
+    { Icon: Phone, label: t.contact_phone, value: phone, href: `tel:${phoneHref(phone)}` },
+    s?.email ? { Icon: Mail, label: t.contact_email, value: s.email, href: `mailto:${s.email}` } : null,
+    address ? { Icon: MapPin, label: t.branch_address, value: address, href: undefined } : null,
+    hours ? { Icon: Clock, label: t.contact_hours, value: hours, href: undefined } : null,
+  ].filter(Boolean) as { Icon: typeof Phone; label: string; value: string; href?: string }[];
 
   return (
-    <section id="contact" className="relative overflow-hidden py-10 md:py-16 section-glass" style={{ background: "rgba(13,13,13,0.5)" }}>
-      <div className="absolute inset-0 pointer-events-none" style={{ background: C.sectionGlow }} />
-      <div className="max-w-[1400px] mx-auto px-4 md:px-6 relative z-10">
-        <div className="text-center mb-10 md:mb-16">
-          <SectionLabel>{t.contact_label}</SectionLabel>
-          <AnimatedText
-            text={t.contact_title}
-            as="h2"
-            className="text-2xl md:text-5xl font-bold font-serif"
-            style={{ color: C.white }}
-            type="words"
-          />
+    <section id="contact" className="section overflow-hidden">
+
+      <div className="shell relative grid items-start gap-12 lg:grid-cols-[1fr_1fr] lg:gap-16">
+        <div>
+          <SectionHeading align="left" eyebrow={t.contact_eyebrow} title={<span className="text-headline">{t.welcome_title}</span>} sub={<><span className="font-bold text-white">{t.welcome_sub}.</span> {t.contact_sub}</>} />
+          <Reveal delay={0.1} className="grid gap-3 sm:grid-cols-2">
+            {rows.map(({ Icon, label, value, href }) => {
+              const inner = (
+                <>
+                  <span className="icon-tile-gold relative z-[2] h-10 w-10 rounded-xl"><Icon className="relative h-[18px] w-[18px]" /></span>
+                  <span className="relative z-[2] min-w-0">
+                    <span className="block font-accent text-[9px] font-medium uppercase tracking-[0.18em] text-white/45">{label}</span>
+                    <span className="mt-0.5 block truncate font-semibold">{value}</span>
+                  </span>
+                </>
+              );
+              const wide = value.length > 22 ? "sm:col-span-2" : "";
+              return href ? (
+                <a key={label} href={href} className={`card card-hover spot flex items-center gap-3.5 rounded-2xl p-3.5 ${wide}`}>{inner}</a>
+              ) : (
+                <div key={label} className={`card flex items-center gap-3.5 rounded-2xl p-3.5 ${wide}`}>{inner}</div>
+              );
+            })}
+          </Reveal>
+          {socials.length > 0 && (
+            <Reveal delay={0.15} className="mt-8">
+              <p className="font-accent text-[10px] font-medium uppercase tracking-[0.2em] text-white/45">{t.contact_social}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {socials.map((so) => (
+                  <a key={so.url} href={so.url} target="_blank" rel="noopener noreferrer" className="btn btn-glass btn-sm capitalize">
+                    <SocialIcon platform={`${so.platform} ${so.url}`} className="h-4 w-4" />
+                    {so.platform}
+                  </a>
+                ))}
+              </div>
+            </Reveal>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-12 mb-8 md:mb-12">
-          <div>
-            <div className="space-y-4 mb-8">
-              {contactInfo.map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-4 p-5 rounded-2xl"
-                  style={{ background: C.card, border: `1px solid ${C.border}` }}
-                >
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: "rgba(112,38,32,0.3)", color: C.gold }}
-                  >
-                    {item.icon}
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold mb-0.5" style={{ color: C.gold, fontFamily: "'Inter', sans-serif" }}>
-                      {item.label}
-                    </div>
-                    <div className="text-sm" style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>
-                      {item.value}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(socialLinks ?? []).map((s) => {
-                const key = s.platform?.toLowerCase();
-                const Icon = SOCIAL_ICONS[key] || Globe;
-                const color = SOCIAL_COLORS[key] || C.gold;
-                return (
-                <a
-                  key={s.id}
-                  href={s.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all hover:-translate-y-0.5 active:translate-y-0.5"
-                  style={{
-                    background: `${color}18`,
-                    color: color,
-                    border: `1px solid ${color}28`,
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                >
-                  <Icon size={15} /> {s.platform}
-                </a>
-                );
-              })}
+        <Reveal delay={0.1} className="relative">
+          {/* 3D crest from the brochure */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/pdf/shield-3d.webp"
+            alt=""
+            loading="lazy"
+            className="pointer-events-none absolute -right-24 -top-28 hidden w-[340px] opacity-90 [mask-image:radial-gradient(closest-side,#000_62%,transparent)] xl:block"
+          />
+          <div className="card ring-grad relative rounded-[28px] bg-[#140c0e]/90 p-5 sm:p-8">
+            <div className="relative z-[2]">
+              <LeadForm dark withQuestion source="contact-section" />
             </div>
           </div>
-
-          <form
-            onSubmit={handleSubmit}
-            className="p-8 rounded-3xl"
-            style={{ background: C.card, border: `1px solid ${C.border}` }}
-          >
-            <h3 className="text-xl font-bold mb-6" style={{ fontFamily: "'Playfair Display', serif", color: C.white }}>
-              Send us a message
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>
-                  {t.name}
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Your full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: `1px solid ${C.border}`,
-                    color: C.white,
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = "rgba(236,198,103,0.5)")}
-                  onBlur={(e) => (e.target.style.borderColor = C.border)}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>
-                  {t.phone}
-                </label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="+998 90 000 00 00"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: `1px solid ${C.border}`,
-                    color: C.white,
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = "rgba(236,198,103,0.5)")}
-                  onBlur={(e) => (e.target.style.borderColor = C.border)}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: C.secondary, fontFamily: "'Inter', sans-serif" }}>
-                  Message
-                </label>
-                <textarea
-                  placeholder="How can we help you?"
-                  rows={4}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all resize-none"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: `1px solid ${C.border}`,
-                    color: C.white,
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = "rgba(236,198,103,0.5)")}
-                  onBlur={(e) => (e.target.style.borderColor = C.border)}
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={sending || sent}
-                className="w-full py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
-                style={{
-                  background: sent ? "#22c55e" : C.btnGrad,
-                  color: C.bg,
-                  fontFamily: "'Inter', sans-serif",
-                  boxShadow: C.btnShadow,
-                }}
-              >
-                {sent ? (
-                  <><CheckCircle size={15} /> Sent!</>
-                ) : sending ? (
-                  <><Loader2 size={15} className="animate-spin" /> Sending...</>
-                ) : (
-                  <><Send size={15} /> Send Message</>
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <div className="rounded-3xl overflow-hidden" style={{ height: "340px", border: `1px solid ${C.border}` }}>
-          <iframe
-            src={(() => {
-              const lat = settings?.latitude ?? 41.3111;
-              const lng = settings?.longitude ?? 69.2797;
-              const d = 0.035;
-              return `https://www.openstreetmap.org/export/embed.html?bbox=${lng - d}%2C${lat - d}%2C${lng + d}%2C${lat + d}&layer=mapnik&marker=${lat}%2C${lng}`;
-            })()}
-            className="w-full h-full"
-            title="Tashkent Law School Location"
-            style={{ filter: "grayscale(100%) invert(92%) contrast(75%) sepia(10%)", border: "none" }}
-          />
-        </div>
+        </Reveal>
       </div>
     </section>
   );
